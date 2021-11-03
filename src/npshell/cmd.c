@@ -139,9 +139,14 @@ int cmd_read(char *cmd_line)
 
     len = strlen(cmd_line);
 
-    if (cmd_line[len-1] == '\n') {
-        cmd_line[len-1] = 0;
-        len -= 1;
+    if (len >= 1 && cmd_line[len-1] == '\n') {
+        if (len >= 2 && cmd_line[len-2] == '\r') {
+            cmd_line[len-2] = 0;
+            len -= 2;
+        } else {
+            cmd_line[len-1] = 0;
+            len -= 1;
+        }
     }
 
     return len;
@@ -236,12 +241,18 @@ static void cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id
     switch (bulitin_cmd_id) {
     case 0:
         // setenv
+
+        // TODO: Handle error
+
         var = strtok(NULL, " ");
         value = strtok(NULL, " ");
         setenv(var, value, 1);
         break;
     case 1:
         // printenv
+
+        // TODO: Handle error
+
         var = strtok(NULL, " ");
 
         envvalue = getenv(var);
