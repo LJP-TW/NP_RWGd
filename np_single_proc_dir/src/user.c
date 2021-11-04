@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "nplist.h"
+#include "unused_uid.h"
 #include "user.h"
 
 user_list *all_users;
@@ -52,16 +53,6 @@ static void envp_list_release(envp_list *list)
     free(list);
 }
 
-static unused_uid_list* unused_uid_list_init(void)
-{
-    unused_uid_list *list = malloc(sizeof(unused_uid_list));
-
-    list->head = NULL;
-    list->cnt = 0;
-
-    return list;
-}
-
 static user_node* user_node_init(user *user)
 {
     user_node *node = malloc(sizeof(user_node));
@@ -78,7 +69,7 @@ void user_list_init(void)
 
     all_users->head = NULL;
     all_users->tail = &(all_users->head);
-    all_users->unused_uid_list = unused_uid_list_init();
+    all_users->unused_uid = unused_uid_init();
     all_users->cnt  = 0;
 }
 
@@ -90,17 +81,6 @@ void user_list_insert(user *user)
     all_users->tail = &(node->next);
 
     all_users->cnt += 1;
-}
-
-uint32_t user_list_alloc_uid(void)
-{
-    if (!all_users->unused_uid_list->cnt) {
-        // New uid
-        return all_users->cnt + 1;
-    }
-
-    // TODO: return uid from unused_uid_list
-    return -1;
 }
 
 user* user_list_find_by_sock(int sock)
@@ -122,7 +102,7 @@ user* user_init(struct sockaddr_in caddr, int sock)
 {
     user *u = malloc(sizeof(user));
 
-    u->uid = user_list_alloc_uid();
+    u->uid = uid_alloc(all_users->unused_uid);
     u->sock = sock;
     u->port = ntohs(caddr.sin_port);
     u->envp_list = envp_list_init();
@@ -137,8 +117,10 @@ user* user_init(struct sockaddr_in caddr, int sock)
     return u;
 }
 
-extern void user_release(user *user)
+void user_release(user *user)
 {
+    uid_release(all_users->unused_uid, user->uid);
+
     if (user->envp_list) {
         envp_list_release(user->envp_list);
     }

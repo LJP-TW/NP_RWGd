@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 
 #include "nplist.h"
+#include "unused_uid.h"
 
 typedef struct envp_node_tag envp_node;
 struct envp_node_tag {
@@ -38,24 +39,11 @@ struct user_node_tag {
     user *user;
 };
 
-typedef struct unused_uid_tag unused_uid;
-struct unused_uid_tag {
-    unused_uid *next;
-    unused_uid *prev;
-    uint32_t uid;
-};
-
-typedef struct unused_uid_list_tag unused_uid_list;
-struct unused_uid_list_tag {
-    unused_uid *head;
-    uint32_t cnt;
-};
-
 typedef struct user_list_tag user_list;
 struct user_list_tag {
     user_node *head;
     user_node **tail;
-    unused_uid_list *unused_uid_list;
+    unused_uid *unused_uid;
     uint32_t cnt; // how many users
 };
 
@@ -64,8 +52,6 @@ extern user_list *all_users;
 extern void user_list_init(void);
 
 extern void user_list_insert(user *user);
-
-extern uint32_t user_list_alloc_uid(void);
 
 extern user* user_list_find_by_sock(int sock);
 
