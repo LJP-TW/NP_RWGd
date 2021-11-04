@@ -67,6 +67,9 @@ void nplist_remove_by_numbered(np_list *list, int numbered)
     while ((np_cur = *np_ptr)) {
         if (np_cur->numbered == numbered) {
             // Keep chain
+            if (!np_cur->next) {
+                list->tail = np_ptr;
+            }
             *np_ptr = np_cur->next;
             
             // Free it
@@ -84,8 +87,6 @@ void nplist_remove_by_numbered(np_list *list, int numbered)
             np_ptr = &(np_cur->next);
         }
     }
-
-    list->tail = np_ptr;
 }
 
 void nplist_close_all_writeend_except_numbered(np_list *list, int numbered)
