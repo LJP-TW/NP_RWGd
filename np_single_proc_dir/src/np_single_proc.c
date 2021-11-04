@@ -137,8 +137,6 @@ int main(int argc, char **argv)
                     perror("user_list_find_by_sock()");
                     exit(1);
                 }
-                
-                // TODO: Fix when client send space first, server will hang
 
                 ret = npshell_run_single_command(user);
 

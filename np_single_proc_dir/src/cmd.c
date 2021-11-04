@@ -137,7 +137,7 @@ int cmd_read(int sock, char *cmd_line)
     len = net_read(sock, cmd_line, MAX_CMDLINE_LEN);
 
     if (len == 0) {
-        return 0;
+        return -1;
     }
 
     len = strlen(cmd_line);

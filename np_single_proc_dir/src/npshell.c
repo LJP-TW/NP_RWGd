@@ -16,9 +16,15 @@ int npshell_run_single_command(user *user)
     // Reading command
     cmd_line_len = cmd_read(user->sock, cmd_line);
 
-    if (!cmd_line_len) {
-        // Empty command
+    if (cmd_line_len == -1) {
+        // Disconnect
         return 1;
+    } else if (!cmd_line_len) {
+        // Empty command
+        // Outputing Prompt
+        prompt(user->sock);
+
+        return 0;
     }
 
     // Parsing command
