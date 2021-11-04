@@ -11,6 +11,8 @@ npshell
 !npshell/
 np_simple
 !np_simple/
+np_single_proc
+!np_single_proc/
 
 # vscode file
 .vscode

@@ -4,6 +4,10 @@ NP_SINGLE_PROC = np_single_proc
 CC = gcc
 CFLAGS = -std=gnu11 -Wall
 
+ifeq ($(DEBUG),1)
+   CFLAGS += -DDEBUG
+endif
+
 INC_NP_SIMPLE      := np_simple_dir/include
 SRC_NP_SIMPLE      := $(wildcard np_simple_dir/src/*.c)
 INC_NP_SINGLE_PROC := np_single_proc_dir/include
