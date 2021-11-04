@@ -138,7 +138,6 @@ int main(int argc, char **argv)
                     exit(1);
                 }
                 
-                // TODO: Fix client cannot recv first prompt
                 // TODO: Fix when client send space first, server will hang
 
                 ret = npshell_run_single_command(user);
