@@ -113,7 +113,7 @@ void user_list_init(void)
     all_users->cnt  = 0;
 }
 
-void user_list_insert(struct sockaddr_in caddr, int sock)
+user_node* user_list_insert(struct sockaddr_in caddr, int sock)
 {
     user *user = user_init(caddr, sock);
     user_node *node = user_node_init(user);
@@ -123,6 +123,8 @@ void user_list_insert(struct sockaddr_in caddr, int sock)
     all_users->tail = &(node->next);
 
     all_users->cnt += 1;
+
+    return node;
 }
 
 void user_list_remove(user_node *node)

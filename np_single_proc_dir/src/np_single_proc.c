@@ -106,6 +106,7 @@ int main(int argc, char **argv)
             int cs; // client socket
             unsigned int caddrlen;
             struct sockaddr_in caddr;
+            user_node *node;
 
             caddrlen = sizeof(caddr);
             if ((cs = accept(ss, (struct sockaddr *)&caddr, &caddrlen)) == -1) {
@@ -115,12 +116,16 @@ int main(int argc, char **argv)
             }
 
             // New user
-            user_list_insert(caddr, cs);
+            node = user_list_insert(caddr, cs);
 
             // Update fd set
             FD_SET(cs, &afds);
 
             // Outputing Prompt
+            msg_motd(cs);
+            
+            msg_broadcast_login(node);
+
             prompt(cs);
         }
 
@@ -139,6 +144,12 @@ int main(int argc, char **argv)
                 ret = npshell_run_single_command(user_node->user);
 
                 if (ret) {
+                    // Disable sock fd
+                    user_node->user->sock = -1;
+
+                    // Broadcast login msg
+                    msg_broadcast_logout(user_node);
+
                     // Disconnect
                     user_list_remove(user_node);
 

@@ -57,7 +57,7 @@ extern user_list *all_users;
 
 extern void user_list_init(void);
 
-extern void user_list_insert(struct sockaddr_in caddr, int sock);
+extern user_node* user_list_insert(struct sockaddr_in caddr, int sock);
 
 extern void user_list_remove(user_node *node);
 
