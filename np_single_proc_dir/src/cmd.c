@@ -461,13 +461,13 @@ int cmd_run(user *user, cmd_node *cmd)
             
             if (!origin_up_in) {
                 // TODO: Broadcast pipe not exists
-                // TODO: pipe /dev/null to stdin 
                 printf("[x] 464: pipe not exists\n");
+                up_in = (up_node *)-1;
             }
         } else {
             // TODO: Broadcast user not exists
-            // TODO: pipe /dev/null to stdin 
             printf("[x] 468: user not exists\n");
+            up_in = (up_node *)-1;
         }
     }
 
@@ -510,14 +510,13 @@ int cmd_run(user *user, cmd_node *cmd)
                     up_out = uplist_insert(user->up_list, cmd->to_uid);
                 } else {
                     // TODO: Broadcast user pipe already exists
-                    // TODO: pipe /dev/null to stdout
                     printf("[x] 511: user pipe already exists!\n");
-                    up_out = NULL;
+                    up_out = (up_node *)-1;
                 }
             } else {
                 // TODO: Broadcast user not exists
-                // TODO: pipe /dev/null to stdout
                 printf("[x] 516: user not exists\n");
+                up_out = (up_node *)-1;
             }
         }
 
@@ -540,7 +539,7 @@ int cmd_run(user *user, cmd_node *cmd)
                 read_pipe = -1;
             }
 
-            if (up_out) {
+            if (up_out && up_out != (up_node *)-1) {
                 if (up_out->fd[1] != -1) {
                     close(up_out->fd[1]);
                     up_out->fd[1] = -1;
@@ -573,7 +572,12 @@ int cmd_run(user *user, cmd_node *cmd)
             if (np_in) {
                 dup2(np_in->fd[0], STDIN_FILENO);
             } else if (up_in) {
-                dup2(up_in->fd[0], STDIN_FILENO);
+                if (up_in == (up_node *)-1) {
+                    int nullfd = open("/dev/null", O_RDONLY);
+                    dup2(nullfd, STDIN_FILENO);
+                } else {
+                    dup2(up_in->fd[0], STDIN_FILENO);
+                }
             } else if (read_pipe != -1) {
                 dup2(read_pipe, STDIN_FILENO);
             }
@@ -604,8 +608,13 @@ int cmd_run(user *user, cmd_node *cmd)
             }
 
             if (up_out) {
-                close(up_out->fd[0]);
-                dup2(up_out->fd[1], STDOUT_FILENO);
+                if (up_out == (up_node *)-1) {
+                    int nullfd = open("/dev/null", O_RDONLY);
+                    dup2(nullfd, STDOUT_FILENO);
+                } else {
+                    close(up_out->fd[0]);
+                    dup2(up_out->fd[1], STDOUT_FILENO);
+                }
             }
 
             // Close pipe
@@ -697,7 +706,7 @@ int cmd_run(user *user, cmd_node *cmd)
             plist_merge(np_out->plist, plist);
             plist_release(plist);
         }
-    } else if (up_out) {
+    } else if (up_out && up_out != (up_node *)-1) {
         if (origin_np_in) {
             plist_merge(plist, origin_np_in->plist);
         } else if (origin_up_in) {
