@@ -28,6 +28,7 @@ struct cmd_node_tag {
 
     // Command
     char *cmd;
+    char *cmd_line;
 
     // Arguments
     argv_node *argv;

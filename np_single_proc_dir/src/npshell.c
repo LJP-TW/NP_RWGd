@@ -39,7 +39,8 @@ int npshell_run_single_command(user *user)
 #ifdef DEBUG
     if (cmd) {
         for (cmd_node *c = cmd; c; c = c->next) {
-            printf("cmd: %s\n", c->cmd);
+            printf("cmd     : %s\n", c->cmd);
+            printf("cmd_line: %s\n", c->cmd_line);
             printf("argv_len: %d\n", c->argv_len);
             for (argv_node *argv = c->argv; argv; argv = argv->next) {
                 printf("\t%s\n", argv->argv);

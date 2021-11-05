@@ -12,6 +12,7 @@
 #include "cmd.h"
 #include "pidlist.h"
 #include "nplist.h"
+#include "prompt.h"
 
 #define ASCII_SPACE 0x20
 
@@ -207,6 +208,9 @@ static int cmd_parse_special_symbols(cmd_node *cmd, char **token_ptr, int ssidx)
                 // User pipe
                 // cmd1 >2
                 uid = atoi(&token[1]);
+                if (uid > 30) {
+                    // TODO: Handle error
+                }
                 cmd->pipetype |= PIPE_USR_STDOUT;
                 cmd->to_uid = uid;
             }
@@ -251,6 +255,9 @@ static int cmd_parse_special_symbols(cmd_node *cmd, char **token_ptr, int ssidx)
             // User pipe
             // cmd <2
             uid = atoi(&token[1]);
+            if (uid > 30) {
+                // TODO: Handle error
+            }
             cmd->pipetype |= PIPE_USR_STDIN;
             cmd->from_uid = uid;
             break;
@@ -335,12 +342,15 @@ cmd_node* cmd_parse(char *cmd_line)
     int bulitin_cmd_id = -1;
     char c;
     int cmd_len = 0;
+    char *origin_cmd_line;
     char *strtok_arg1 = cmd_line;
     char *token;
     cmd_node *cmd_head;
     cmd_node *cmd;
     cmd_node **curcmd = &cmd_head;
     argv_node *argv;
+
+    origin_cmd_line = strdup(cmd_line);
 
     // Parse command
     while ((token = strtok(strtok_arg1, " ")) != NULL) {
@@ -383,6 +393,7 @@ cmd_node* cmd_parse(char *cmd_line)
         }
         
         // Ok, save this command
+        cmd->cmd_line = origin_cmd_line;
         cmd->cmd = strdup(token);
         cmd_len += 1;
 
@@ -441,6 +452,7 @@ int cmd_run(user *user, cmd_node *cmd)
     np_node *np_in, *origin_np_in;
     user_node *from_user_node = NULL;
     up_node *up_in = NULL, *origin_up_in = NULL;
+    char *cmd_line = cmd->cmd_line;
 
     plist = plist_init();
 
@@ -460,13 +472,13 @@ int cmd_run(user *user, cmd_node *cmd)
             origin_up_in = up_in = uplist_find_by_uid(from_user_node->user->up_list, user->uid);        
             
             if (!origin_up_in) {
-                // TODO: Broadcast pipe not exists
-                printf("[x] 464: pipe not exists\n");
+                msg_err_up_not_exists(user->sock, cmd->from_uid, user->uid);
                 up_in = (up_node *)-1;
+            } else {
+                msg_broadcast_up_recv(cmd_line, from_user_node->user, user);
             }
         } else {
-            // TODO: Broadcast user not exists
-            printf("[x] 468: user not exists\n");
+            msg_err_user_not_exists(user->sock, cmd->from_uid);
             up_in = (up_node *)-1;
         }
     }
@@ -508,14 +520,15 @@ int cmd_run(user *user, cmd_node *cmd)
                 up_out = uplist_find_by_uid(user->up_list, cmd->to_uid);
                 if (!up_out) {
                     up_out = uplist_insert(user->up_list, cmd->to_uid);
+
+                    msg_broadcast_up_send(cmd_line, user, to_user_node->user);
+
                 } else {
-                    // TODO: Broadcast user pipe already exists
-                    printf("[x] 511: user pipe already exists!\n");
+                    msg_err_up_exists(user->sock, user->uid, cmd->to_uid);
                     up_out = (up_node *)-1;
                 }
             } else {
-                // TODO: Broadcast user not exists
-                printf("[x] 516: user not exists\n");
+                msg_err_user_not_exists(user->sock, cmd->to_uid);
                 up_out = (up_node *)-1;
             }
         }
@@ -751,6 +764,8 @@ int cmd_run(user *user, cmd_node *cmd)
     }
 
     enable_sh();
+
+    free(cmd_line);
 
     return 0;
 }
