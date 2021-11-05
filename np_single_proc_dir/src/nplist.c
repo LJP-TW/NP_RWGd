@@ -14,6 +14,23 @@ static np_node* npnode_init(int numbered)
     return new_np;
 }
 
+static void npnode_release(np_node *node)
+{
+    if (node->plist) {
+        plist_release(node->plist);
+    }
+
+    if (node->fd[0]) {
+        close(node->fd[0]);
+    }
+
+    if (node->fd[1]) {
+        close(node->fd[1]);
+    }
+
+    free(node);
+}
+
 np_list* nplist_init(void)
 {
     np_list *list = malloc(sizeof(np_list));
@@ -31,9 +48,7 @@ void nplist_release(np_list *list)
 
     while ((cur = list->head)) {
         list->head = cur->next;
-
-        plist_release(cur->plist);
-        free(cur);
+        npnode_release(cur);
     }
 
     free(list);

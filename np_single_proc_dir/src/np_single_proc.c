@@ -106,7 +106,6 @@ int main(int argc, char **argv)
             int cs; // client socket
             unsigned int caddrlen;
             struct sockaddr_in caddr;
-            user *user;
 
             caddrlen = sizeof(caddr);
             if ((cs = accept(ss, (struct sockaddr *)&caddr, &caddrlen)) == -1) {
@@ -115,9 +114,8 @@ int main(int argc, char **argv)
                 exit(1);
             }
 
-            // Initialize user struct
-            user = user_init(caddr, cs);
-            user_list_insert(user);
+            // New user
+            user_list_insert(caddr, cs);
 
             // Update fd set
             FD_SET(cs, &afds);
@@ -129,20 +127,20 @@ int main(int argc, char **argv)
         // Client socket
         for (int fd = 0; fd < nfds; ++fd) {
             if (fd != ss && FD_ISSET(fd, &rfds)) {
-                user *user;
+                user_node *user_node;
                 int ret;
                 
-                if (!(user = user_list_find_by_sock(fd))) {
+                if (!(user_node = user_list_find_by_sock(fd))) {
                     // TODO: report error
                     perror("user_list_find_by_sock()");
                     exit(1);
                 }
 
-                ret = npshell_run_single_command(user);
+                ret = npshell_run_single_command(user_node->user);
 
                 if (ret) {
                     // Disconnect
-                    user_release(user);
+                    user_list_remove(user_node);
 
                     // Update fd set
                     FD_CLR(fd, &afds);

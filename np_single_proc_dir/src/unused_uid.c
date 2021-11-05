@@ -37,10 +37,10 @@ uint32_t uid_alloc(unused_uid *uu)
 
     uu->uidmap ^= rmsb;
 
-    return rmsb_to_uid(rmsb);
+    return rmsb_to_uid(rmsb) + 1;
 }
 
 void uid_release(unused_uid *uu, uint32_t uid)
 {
-    uu->uidmap |= (1 << uid);
+    uu->uidmap |= (1 << (uid - 1));
 }

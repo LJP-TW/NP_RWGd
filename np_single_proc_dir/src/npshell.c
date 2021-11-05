@@ -50,6 +50,10 @@ int npshell_run_single_command(user *user)
                 printf("pipetype : %d\n", c->pipetype);
             if (c->numbered)
                 printf("numbered : %d\n", c->numbered);
+            if (c->to_uid)
+                printf("to_uid   : %d\n", c->to_uid);
+            if (c->from_uid)
+                printf("from_uid : %d\n", c->from_uid);
         }
     }
 #endif

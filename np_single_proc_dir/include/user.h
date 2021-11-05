@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 
 #include "nplist.h"
+#include "uplist.h"
 #include "unused_uid.h"
 
 typedef struct envp_node_tag envp_node;
@@ -29,6 +30,7 @@ struct user_tag {
     uint16_t port;
     envp_list *envp_list;  // environment parameters
     np_list *np_list;      // numbered pipes
+    up_list *up_list;      // user pipes to other uid
     char ip[0x10];   // xxx.xxx.xxx.xxx
     char name[0x20]; // maximum length is 20, 0x20 is for memory alignment
 };
@@ -36,6 +38,10 @@ struct user_tag {
 typedef struct user_node_tag user_node;
 struct user_node_tag {
     user_node *next;
+    user_node *prev;
+
+    // The order of above member cannot be changed
+
     user *user;
 };
 
@@ -51,12 +57,12 @@ extern user_list *all_users;
 
 extern void user_list_init(void);
 
-extern void user_list_insert(user *user);
+extern void user_list_insert(struct sockaddr_in caddr, int sock);
 
-extern user* user_list_find_by_sock(int sock);
+extern void user_list_remove(user_node *node);
 
-extern user* user_init(struct sockaddr_in caddr, int sock);
+extern user_node* user_list_find_by_sock(int sock);
 
-extern void user_release(user *user);
+extern user_node* user_list_find_by_uid(uint32_t uid);
 
 #endif
