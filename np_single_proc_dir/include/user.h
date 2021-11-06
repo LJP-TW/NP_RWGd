@@ -33,6 +33,7 @@ struct user_node_tag {
     user *user;
 };
 
+// Sort by uid in ascending order
 typedef struct user_list_tag user_list;
 struct user_list_tag {
     user_node *head;
@@ -53,8 +54,10 @@ extern user_node* user_list_find_by_sock(int sock);
 
 extern user_node* user_list_find_by_uid(uint32_t uid);
 
-extern void user_setenv(user *user, char *key, char *value);
+extern void user_cmd_setenv(user *user, char *key, char *value);
 
-extern void user_printenv(user *user, char *key);
+extern void user_cmd_printenv(user *user, char *key);
+
+extern void user_cmd_who(user *user);
 
 #endif

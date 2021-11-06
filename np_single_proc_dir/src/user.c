@@ -73,12 +73,34 @@ user_node* user_list_insert(struct sockaddr_in caddr, int sock)
 {
     user *user = user_init(caddr, sock);
     user_node *node = user_node_init(user);
-
-    node->prev = (user_node *)all_users->tail; // next offset = 0
-    *(all_users->tail) = node;
-    all_users->tail = &(node->next);
+    user_node *tail = (user_node *)(all_users->tail);
 
     all_users->cnt += 1;
+
+    if (!all_users->head || tail->user->uid < user->uid) {
+        // Append; update tail
+        node->prev = (user_node *)all_users->tail; // next offset = 0
+        *(all_users->tail) = node;
+        all_users->tail = &(node->next);
+        return node;
+    } 
+
+    // Find position; don't update tail
+    while ((user_node **)(tail = tail->prev) != &(all_users->head)) {
+        if (tail->user->uid < user->uid) {
+            node->next = tail->next;
+            tail->next->prev = node;
+            tail->next = node;
+            node->prev = tail;
+            return node;            
+        }
+    }
+
+    // Update head
+    node->prev = (user_node *)&(all_users->head);
+    node->next = all_users->head;
+    all_users->head->prev = node;
+    all_users->head = node;
 
     return node;
 }
@@ -127,7 +149,7 @@ user_node* user_list_find_by_uid(uint32_t uid)
     return NULL;
 }
 
-void user_setenv(user *user, char *key, char *value)
+void user_cmd_setenv(user *user, char *key, char *value)
 {
     envp_node *node = envp_list_find(user->envp_list, key);
 
@@ -139,7 +161,7 @@ void user_setenv(user *user, char *key, char *value)
     }
 }
 
-void user_printenv(user *user, char *key)
+void user_cmd_printenv(user *user, char *key)
 {
     char buf[0x100] = { 0 };
     envp_node *node = envp_list_find(user->envp_list, key);
@@ -147,5 +169,37 @@ void user_printenv(user *user, char *key)
     if (node) {
         sprintf(buf, "%s\n", node->value);
         msg_tell(user->sock, buf);
+    }
+}
+
+void user_cmd_who(user *user)
+{
+    char buf[0x30] = { 0 };
+    
+    msg_tell(user->sock, "<ID>\t<nickname>\t<IP:port>\t<indicate me>\n");
+
+    user_node *cur = all_users->head;
+
+    while (cur) {
+        // ID
+        sprintf(buf, "%d\t", cur->user->uid);
+        msg_tell(user->sock, buf);
+
+        // Nickname
+        sprintf(buf, "%s\t", cur->user->name);
+        msg_tell(user->sock, buf);
+
+        // IP:Port
+        sprintf(buf, "%s:%d\t", cur->user->ip, cur->user->port);
+        msg_tell(user->sock, buf);
+
+        // Is me?
+        if (cur->user->uid == user->uid) {
+            msg_tell(user->sock, "<-me");
+        }
+        
+        msg_tell(user->sock, "\n");
+
+        cur = cur->next;
     }
 }

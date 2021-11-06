@@ -297,7 +297,7 @@ static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bul
         // TODO: Handle error
 
         if ((var = strtok(NULL, " ")) && (value = strtok(NULL, " "))) {
-            user_setenv(user, var, value);
+            user_cmd_setenv(user, var, value);
         }
         break;
     case 1:
@@ -306,7 +306,7 @@ static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bul
         // TODO: Handle error
 
         if ((var = strtok(NULL, " "))) {
-            user_printenv(user, var);
+            user_cmd_printenv(user, var);
         }
         break;
     case 2:
@@ -315,7 +315,7 @@ static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bul
         return -1;
         break;
     case 3:
-        // TODO: who
+        user_cmd_who(user);
         break;
     case 4:
         // TODO: tell
