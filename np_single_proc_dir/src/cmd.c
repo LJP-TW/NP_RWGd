@@ -289,6 +289,7 @@ static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bul
     // Parse bulit-in command
     char *var;
     char *value;
+    char *msg;
 
     switch (bulitin_cmd_id) {
     case 0:
@@ -318,13 +319,26 @@ static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bul
         user_cmd_who(user);
         break;
     case 4:
-        // TODO: tell
+        if ((var = strtok(NULL, " "))) {
+            msg = var + strlen(var) + 1;
+            uint32_t to_uid = atoi(var);
+
+            if (to_uid > 30) {
+                // TODO: Handle error
+            }
+
+            user_cmd_tell(user, to_uid, msg);
+        }
         break;
     case 5:
-        // TODO: yell
+        msg = token + 5;
+
+        user_cmd_yell(user, msg);
         break;
     case 6:
-        // TODO: name
+        if ((var = strtok(NULL, " "))) {
+            user_cmd_name(user, var);
+        }
         break;
     }
 

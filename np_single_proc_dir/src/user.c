@@ -149,6 +149,21 @@ user_node* user_list_find_by_uid(uint32_t uid)
     return NULL;
 }
 
+user_node* user_list_find_by_name(char *name)
+{
+    user_node *cur = all_users->head;
+
+    while (cur) {
+        if (!strcmp(cur->user->name, name)) {
+            return cur;
+        }
+
+        cur = cur->next;
+    }
+
+    return NULL;
+}
+
 void user_cmd_setenv(user *user, char *key, char *value)
 {
     envp_node *node = envp_list_find(user->envp_list, key);
@@ -201,5 +216,52 @@ void user_cmd_who(user *user)
         msg_tell(user->sock, "\n");
 
         cur = cur->next;
+    }
+}
+
+void user_cmd_tell(user *user, uint32_t to_uid, char *msg)
+{
+    char buf[0x40] = { 0 };
+    user_node *node = user_list_find_by_uid(to_uid);
+
+    if (node) {
+        sprintf(buf, "*** %s told you ***: ", user->name);
+
+        msg_tell(node->user->sock, buf);
+        msg_tell(node->user->sock, msg);
+        msg_tell(node->user->sock, "\n");
+    } else {
+        sprintf(buf, "*** Error: user #%d does not exist yet. ***\n", to_uid);
+        msg_tell(user->sock, buf);
+    }
+}
+
+void user_cmd_yell(user *user, char *msg)
+{
+    char buf[0x40] = { 0 };
+
+    sprintf(buf, "*** %s yelled ***:  ", user->name);
+
+    msg_broadcast(buf);
+    msg_broadcast(msg);
+    msg_broadcast("\n");
+}
+
+void user_cmd_name(user *user, char *new_name)
+{
+    char buf[0x50] = { 0 };
+    user_node *node = user_list_find_by_name(new_name);
+
+    if (node) {
+        sprintf(buf, "*** User '%s' already exists. ***\n", new_name);
+        msg_tell(user->sock, buf);
+    } else {
+        strcpy(user->name, new_name);
+
+        // e.g. *** User from 140.113.215.62:1201 is named 'Mike'. ***
+        sprintf(buf, "*** User from %s:%d is named '", user->ip, user->port);
+        msg_broadcast(buf);
+        msg_broadcast(new_name);
+        msg_broadcast("'. ***\n");
     }
 }

@@ -54,10 +54,18 @@ extern user_node* user_list_find_by_sock(int sock);
 
 extern user_node* user_list_find_by_uid(uint32_t uid);
 
+extern user_node* user_list_find_by_name(char *name);
+
 extern void user_cmd_setenv(user *user, char *key, char *value);
 
 extern void user_cmd_printenv(user *user, char *key);
 
 extern void user_cmd_who(user *user);
+
+extern void user_cmd_tell(user *user, uint32_t to_uid, char *msg);
+
+extern void user_cmd_yell(user *user, char *msg);
+
+extern void user_cmd_name(user *user, char *new_name);
 
 #endif
