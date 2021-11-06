@@ -18,6 +18,7 @@ struct pid_node_list_tag {
 
 extern pid_list *closed_plist;
 extern pid_list *sh_closed_plist;
+extern pid_list *alive_plist;
 
 extern pid_list* plist_init();
 

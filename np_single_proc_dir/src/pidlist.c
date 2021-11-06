@@ -6,6 +6,7 @@
 
 pid_list *closed_plist;
 pid_list *sh_closed_plist;
+pid_list *alive_plist;
 
 pid_list* plist_init()
 {
@@ -25,6 +26,9 @@ void plist_release(pid_list *plist)
 
     while ((tmp = *ptr)) {
         *ptr = tmp->next;
+
+        plist_insert(alive_plist, tmp->pid);
+        
         free(tmp);
     }
 

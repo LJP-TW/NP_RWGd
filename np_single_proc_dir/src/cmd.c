@@ -98,6 +98,7 @@ void cmd_init()
     // Init closed pid_list
     closed_plist    = plist_init();
     sh_closed_plist = plist_init();
+    alive_plist     = plist_init();
 
     // Init sigset
     sigemptyset(&sigset_SIGCHLD);
@@ -469,7 +470,7 @@ int cmd_run(user *user, cmd_node *cmd)
         from_user_node = user_list_find_by_uid(cmd->from_uid);
 
         if (from_user_node) {
-            origin_up_in = up_in = uplist_find_by_uid(from_user_node->user->up_list, user->uid);        
+            origin_up_in = up_in = uplist_find(from_user_node->user->up_list, user);        
             
             if (!origin_up_in) {
                 msg_err_up_not_exists(user->sock, cmd->from_uid, user->uid);
@@ -517,9 +518,9 @@ int cmd_run(user *user, cmd_node *cmd)
             user_node *to_user_node = user_list_find_by_uid(cmd->to_uid);
             if (to_user_node) {
                 // Ok, User exists
-                up_out = uplist_find_by_uid(user->up_list, cmd->to_uid);
+                up_out = uplist_find(user->up_list, to_user_node->user);
                 if (!up_out) {
-                    up_out = uplist_insert(user->up_list, cmd->to_uid);
+                    up_out = uplist_insert(user->up_list, to_user_node->user);
 
                     msg_broadcast_up_send(cmd_line, user, to_user_node->user);
 
@@ -704,6 +705,7 @@ int cmd_run(user *user, cmd_node *cmd)
 
     // Update pid list
     plist_merge(closed_plist, sh_closed_plist);
+    plist_delete_intersect(alive_plist, closed_plist);
 
     if (np_out) {
         if (origin_np_in) {

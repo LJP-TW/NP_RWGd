@@ -25,8 +25,9 @@ struct envp_list_tag {
 
 typedef struct user_tag user;
 struct user_tag {
-    uint32_t uid;
+    uint32_t uid;    // User id
     int      sock;   // socket
+    uint32_t sid;    // Session id
     uint16_t port;
     envp_list *envp_list;  // environment parameters
     np_list *np_list;      // numbered pipes

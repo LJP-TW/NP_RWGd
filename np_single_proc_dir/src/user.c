@@ -4,6 +4,7 @@
 #include "nplist.h"
 #include "unused_uid.h"
 #include "user.h"
+#include "prng.h"
 
 user_list *all_users;
 
@@ -70,6 +71,7 @@ static user* user_init(struct sockaddr_in caddr, int sock)
 
     u->uid = uid_alloc(all_users->unused_uid);
     u->sock = sock;
+    get_rand(&(u->sid), sizeof(u->sid));
     u->port = ntohs(caddr.sin_port);
     u->envp_list = envp_list_init();
 
