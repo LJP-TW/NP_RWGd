@@ -1,58 +1,12 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "nplist.h"
-#include "unused_uid.h"
 #include "user.h"
 #include "prng.h"
+#include "prompt.h"
 
 user_list *all_users;
-
-static envp_node* envp_node_init(char *key, char *value)
-{
-    envp_node *node = malloc(sizeof(envp_node));
-
-    node->next  = NULL;
-    node->key   = strdup(key);
-    node->value = strdup(value);
-
-    return node;
-}
-
-static void envp_list_insert(envp_list *list, char *key, char *value)
-{
-    envp_node *node = envp_node_init(key, value);
-
-    *(list->tail) = node;
-    list->tail = &(node->next);
-
-    list->cnt += 1;
-}
-
-static envp_list* envp_list_init(void)
-{
-    envp_list *list = malloc(sizeof(envp_list));
-
-    list->head = NULL;
-    list->tail = &(list->head);
-    list->cnt = 0;
-
-    return list;
-}
-
-static void envp_list_release(envp_list *list)
-{
-    envp_node *cur;
-
-    while ((cur = list->head)) {
-        list->head = cur->next;
-        free(cur->key);
-        free(cur->value);
-        free(cur);
-    }
-
-    free(list);
-}
 
 static user_node* user_node_init(user *user)
 {
@@ -171,4 +125,27 @@ user_node* user_list_find_by_uid(uint32_t uid)
     }
 
     return NULL;
+}
+
+void user_setenv(user *user, char *key, char *value)
+{
+    envp_node *node = envp_list_find(user->envp_list, key);
+
+    if (node) {
+        free(node->value);
+        node->value = strdup(value);
+    } else {
+        envp_list_insert(user->envp_list, key, value);
+    }
+}
+
+void user_printenv(user *user, char *key)
+{
+    char buf[0x100] = { 0 };
+    envp_node *node = envp_list_find(user->envp_list, key);
+
+    if (node) {
+        sprintf(buf, "%s\n", node->value);
+        msg_tell(user->sock, buf);
+    }
 }

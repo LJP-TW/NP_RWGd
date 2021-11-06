@@ -28,7 +28,7 @@ int npshell_run_single_command(user *user)
     }
 
     // Parsing command
-    cmd = cmd_parse(cmd_line);
+    cmd = cmd_parse(user, cmd_line);
 
     if (cmd == (cmd_node*)-1) {
         // Exit

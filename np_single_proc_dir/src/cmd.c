@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,8 +11,6 @@
 #include "sys_variable.h"
 #include "netio.h"
 #include "cmd.h"
-#include "pidlist.h"
-#include "nplist.h"
 #include "prompt.h"
 
 #define ASCII_SPACE 0x20
@@ -285,12 +284,11 @@ static int cmd_parse_special_symbols(cmd_node *cmd, char **token_ptr, int ssidx)
     return 0;
 }
 
-static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
+static int cmd_parse_bulitin_cmd(user *user, cmd_node *cmd, char *token, int bulitin_cmd_id)
 {
     // Parse bulit-in command
     char *var;
     char *value;
-    char *envvalue;
 
     switch (bulitin_cmd_id) {
     case 0:
@@ -299,8 +297,7 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
         // TODO: Handle error
 
         if ((var = strtok(NULL, " ")) && (value = strtok(NULL, " "))) {
-            // TODO: Update
-            setenv(var, value, 1);
+            user_setenv(user, var, value);
         }
         break;
     case 1:
@@ -309,10 +306,7 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
         // TODO: Handle error
 
         if ((var = strtok(NULL, " "))) {
-            if ((envvalue = getenv(var))) {
-                // TODO: Update
-                printf("%s\n", envvalue);
-            }
+            user_printenv(user, var);
         }
         break;
     case 2:
@@ -337,7 +331,7 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
     return 0;
 }
 
-cmd_node* cmd_parse(char *cmd_line)
+cmd_node* cmd_parse(user *user, char *cmd_line)
 {
     int firstcmd = 1;
     int bulitin_cmd_id = -1;
@@ -352,6 +346,8 @@ cmd_node* cmd_parse(char *cmd_line)
     argv_node *argv;
 
     origin_cmd_line = strdup(cmd_line);
+
+    // TODO: Fix Bug, Prefix space and no command
 
     // Parse command
     while ((token = strtok(strtok_arg1, " ")) != NULL) {
@@ -383,7 +379,7 @@ cmd_node* cmd_parse(char *cmd_line)
             if (bulitin_cmd_id != -1) {
                 int ret;
                 
-                ret = cmd_parse_bulitin_cmd(cmd, token, bulitin_cmd_id);
+                ret = cmd_parse_bulitin_cmd(user, cmd, token, bulitin_cmd_id);
 
                 if (ret == -1) {
                     return (cmd_node*)-1;
@@ -441,20 +437,21 @@ cmd_node* cmd_parse(char *cmd_line)
     return cmd_head;
 }
 
+/*
+ * cmd_node *cmd can be NULL
+ */
 int cmd_run(user *user, cmd_node *cmd)
 {
-    int idx;
     pid_t pid;
     int read_pipe = -1;
     np_node *np_out = NULL;
     up_node *up_out = NULL;
     cmd_node *next_cmd;
-    char **argv;
     np_node *np_in, *origin_np_in;
     user_node *from_user_node = NULL;
     up_node *up_in = NULL, *origin_up_in = NULL;
-    char *cmd_line = cmd->cmd_line;
-
+    char *cmd_line;
+    
     plist = plist_init();
 
     // Enable signal handler
@@ -465,22 +462,26 @@ int cmd_run(user *user, cmd_node *cmd)
     origin_np_in = np_in = nplist_find_by_numbered(user->np_list, 0);
 
     // Handle input pipe
-    // Only one pipe will be directed to stdin at the same time
-    if (!np_in && (cmd->pipetype & PIPE_USR_STDIN)) {
-        from_user_node = user_list_find_by_uid(cmd->from_uid);
+    if (cmd) {
+        cmd_line = cmd->cmd_line;
 
-        if (from_user_node) {
-            origin_up_in = up_in = uplist_find(from_user_node->user->up_list, user);        
-            
-            if (!origin_up_in) {
-                msg_err_up_not_exists(user->sock, cmd->from_uid, user->uid);
-                up_in = (up_node *)-1;
+        // Only one pipe will be directed to stdin at the same time
+        if (!np_in && (cmd->pipetype & PIPE_USR_STDIN)) {
+            from_user_node = user_list_find_by_uid(cmd->from_uid);
+
+            if (from_user_node) {
+                origin_up_in = up_in = uplist_find(from_user_node->user->up_list, user);        
+
+                if (!origin_up_in) {
+                    msg_err_up_not_exists(user->sock, cmd->from_uid, user->uid);
+                    up_in = (up_node *)-1;
+                } else {
+                    msg_broadcast_up_recv(cmd_line, from_user_node->user, user);
+                }
             } else {
-                msg_broadcast_up_recv(cmd_line, from_user_node->user, user);
+                msg_err_user_not_exists(user->sock, cmd->from_uid);
+                up_in = (up_node *)-1;
             }
-        } else {
-            msg_err_user_not_exists(user->sock, cmd->from_uid);
-            up_in = (up_node *)-1;
         }
     }
 
@@ -578,6 +579,8 @@ int cmd_run(user *user, cmd_node *cmd)
             cmd = next_cmd;
         } else if (!pid) {
             // Child process
+            char **argv;
+            int idx;
 
             // Handle input pipe
 
@@ -645,7 +648,10 @@ int cmd_run(user *user, cmd_node *cmd)
             }
             argv[idx] = NULL;
 
-            // TODO: Make envp
+            // Set envp
+            for (envp_node *en = user->envp_list->head; en; en = en->next) {
+                setenv(en->key, en->value, 1);
+            }
 
             // Execute command
             execvp(cmd->cmd, argv);
@@ -767,7 +773,9 @@ int cmd_run(user *user, cmd_node *cmd)
 
     enable_sh();
 
-    free(cmd_line);
+    if (cmd_line) {
+        free(cmd_line);
+    }
 
     return 0;
 }

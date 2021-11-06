@@ -8,20 +8,7 @@
 #include "nplist.h"
 #include "uplist.h"
 #include "unused_uid.h"
-
-typedef struct envp_node_tag envp_node;
-struct envp_node_tag {
-    envp_node *next;
-    char *key;
-    char *value;
-};
-
-typedef struct envp_list_tag envp_list;
-struct envp_list_tag {
-    envp_node *head;
-    envp_node **tail;
-    uint32_t cnt;
-};
+#include "envp.h"
 
 typedef struct user_tag user;
 struct user_tag {
@@ -65,5 +52,9 @@ extern void user_list_remove(user_node *node);
 extern user_node* user_list_find_by_sock(int sock);
 
 extern user_node* user_list_find_by_uid(uint32_t uid);
+
+extern void user_setenv(user *user, char *key, char *value);
+
+extern void user_printenv(user *user, char *key);
 
 #endif
