@@ -5,5 +5,5 @@
 
 void prompt(int sock)
 {
-    net_write(sock, "% ", 3);
+    net_write(sock, "% ", 2);
 }
