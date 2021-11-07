@@ -4,7 +4,7 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 # for testing
-np_project1_demo_sample/
+np_project2_demo_sample/
 
 # target binary
 npshell
