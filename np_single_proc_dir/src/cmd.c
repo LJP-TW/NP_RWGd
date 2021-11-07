@@ -640,7 +640,7 @@ int cmd_run(user *user, cmd_node *cmd)
 
             if (up_out) {
                 if (up_out == (up_node *)-1) {
-                    int nullfd = open("/dev/null", O_RDONLY);
+                    int nullfd = open("/dev/null", O_WRONLY);
                     dup2(nullfd, STDOUT_FILENO);
                 } else {
                     close(up_out->fd[0]);
