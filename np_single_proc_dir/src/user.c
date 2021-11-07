@@ -30,7 +30,7 @@ static user* user_init(struct sockaddr_in caddr, int sock)
     u->envp_list = envp_list_init();
 
     // Initial envp
-    envp_list_insert(u->envp_list, "PATH", "/bin");
+    envp_list_insert(u->envp_list, "PATH", "bin:.");
 
     u->np_list = nplist_init();
     u->up_list = uplist_init();
