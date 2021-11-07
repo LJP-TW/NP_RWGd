@@ -11,8 +11,8 @@ pid_list* plist_init()
 {
     pid_list *plist = malloc(sizeof(pid_list));
     
-    plist->next = NULL;
-    plist->last = &(plist->next);
+    plist->head = NULL;
+    plist->last = &(plist->head);
     plist->len = 0;
 
     return plist;
@@ -20,7 +20,7 @@ pid_list* plist_init()
 
 void plist_release(pid_list *plist)
 {
-    pid_node **ptr = &(plist->next);
+    pid_node **ptr = &(plist->head);
     pid_node *tmp;
 
     while ((tmp = *ptr)) {
@@ -56,11 +56,12 @@ void plist_insert_block(pid_list *plist, pid_t pid)
 
 void plist_merge(pid_list *plist1, pid_list *plist2)
 {
-    *(plist1->last) = plist2->next;
+    *(plist1->last) = plist2->head;
+    plist1->last = plist2->last;
     plist1->len += plist2->len;
 
-    plist2->next = NULL;
-    plist2->last = &(plist2->next);
+    plist2->head = NULL;
+    plist2->last = &(plist2->head);
     plist2->len  = 0;
 }
 
@@ -72,12 +73,12 @@ void plist_delete_intersect(pid_list *plist1, pid_list *plist2)
     pid_node **pb;
     pid_node *tb;
 
-    pa = &(plist1->next);
+    pa = &(plist1->head);
 
     while(plist1->len && plist2->len && (ta = *pa)) {
         int found = 0;
 
-        pb = &(plist2->next);
+        pb = &(plist2->head);
 
         while ((tb = *pb)) {
             if (ta->pid == tb->pid) {
@@ -117,7 +118,7 @@ int plist_delete_by_pid(pid_list *plist1, pid_t pid)
     if (!plist1 || !plist1->len)
         return 0;
 
-    pa = &(plist1->next);
+    pa = &(plist1->head);
 
     while((ta = *pa)) {
         if (ta->pid == pid) {

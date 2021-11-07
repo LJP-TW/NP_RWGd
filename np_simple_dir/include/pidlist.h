@@ -11,7 +11,7 @@ struct pid_node_tag {
 
 typedef struct pid_node_list_tag pid_list;
 struct pid_node_list_tag {
-    pid_node *next;
+    pid_node *head;
     pid_node **last;
     int len;
 };

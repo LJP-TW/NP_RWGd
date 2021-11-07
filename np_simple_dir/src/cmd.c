@@ -695,14 +695,14 @@ int cmd_run(int sock, cmd_node *cmd)
         // Wait for origin_np_in
         if (origin_np_in) {
             plist_delete_intersect(origin_np_in->plist, closed_plist);
-            for (pid_node *pn = origin_np_in->plist->next; pn; pn = pn->next) {
+            for (pid_node *pn = origin_np_in->plist->head; pn; pn = pn->next) {
                 waitpid(pn->pid, &status, 0);
             }
         }
 
         // Wait for plist
         plist_delete_intersect(plist, closed_plist);
-        for (pid_node *pn = plist->next; pn; pn = pn->next) {
+        for (pid_node *pn = plist->head; pn; pn = pn->next) {
             waitpid(pn->pid, &status, 0);
         }
 
