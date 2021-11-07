@@ -10,6 +10,7 @@
 #include "sys_variable.h"
 #include "cmd.h"
 #include "pidlist.h"
+#include "netio.h"
 
 #define ASCII_SPACE 0x20
 
@@ -129,15 +130,21 @@ static void cmd_node_release(cmd_node *cmd)
     free(cmd);
 }
 
-int cmd_read(char *cmd_line)
+int cmd_read(int sock, char *cmd_line)
 {
-    int len;
+    int len, slen;
 
-    if (!fgets(cmd_line, MAX_CMDLINE_LEN, stdin)) {
-        exit(1);
+    len = net_read(sock, cmd_line, MAX_CMDLINE_LEN);
+
+    if (len == 0) {
+        return -1;
     }
 
-    len = strlen(cmd_line);
+    slen = strlen(cmd_line);
+
+    if (slen < len) {
+        len = slen;
+    }
 
     if (len >= 1 && cmd_line[len-1] == '\n') {
         if (len >= 2 && cmd_line[len-2] == '\r') {
@@ -231,7 +238,7 @@ static int cmd_parse_special_symbols(cmd_node *cmd, char **token_ptr, int ssidx)
     return 0;
 }
 
-static void cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
+static void cmd_parse_bulitin_cmd(int sock, cmd_node *cmd, char *token, int bulitin_cmd_id)
 {
     // Parse bulit-in command
     char *var;
@@ -256,8 +263,11 @@ static void cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id
         var = strtok(NULL, " ");
 
         envvalue = getenv(var);
-        if (envvalue)
-            printf("%s\n", envvalue);
+        if (envvalue) {
+            char buf[0x100] = { 0 };
+            sprintf(buf, "%s\n", envvalue);
+            net_write(sock, buf, strlen(buf));
+        }
         break;
     case 2:
         // exit
@@ -266,7 +276,7 @@ static void cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id
     }
 }
 
-cmd_node* cmd_parse(char *cmd_line)
+cmd_node* cmd_parse(int sock, char *cmd_line)
 {
     int firstcmd = 1;
     int bulitin_cmd_id = -1;
@@ -307,7 +317,7 @@ cmd_node* cmd_parse(char *cmd_line)
             }
 
             if (bulitin_cmd_id != -1) {
-                cmd_parse_bulitin_cmd(cmd, token, bulitin_cmd_id);
+                cmd_parse_bulitin_cmd(sock, cmd, token, bulitin_cmd_id);
                 return NULL;
             }
         }
@@ -484,7 +494,7 @@ static void fdlist_update()
     }
 }
 
-int cmd_run(cmd_node *cmd)
+int cmd_run(int sock, cmd_node *cmd)
 {
     int idx;
     pid_t pid;
@@ -575,6 +585,9 @@ int cmd_run(cmd_node *cmd)
             }
 
             // Handle input pipe
+            
+            dup2(sock, STDIN_FILENO);
+
             if (np_in) {
                 dup2(np_in->fd[0], STDIN_FILENO);
             } else if (read_pipe != -1) {
@@ -582,6 +595,10 @@ int cmd_run(cmd_node *cmd)
             }
             
             // Handle output pipe
+
+            dup2(sock, STDOUT_FILENO);
+            dup2(sock, STDERR_FILENO);
+
             switch(cmd->pipetype) {
             case PIPE_ORDINARY:
                 close(cur_pipe[0]);

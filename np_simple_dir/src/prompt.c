@@ -1,8 +1,9 @@
-#include <stdio.h>
+#include <unistd.h>
 
 #include "prompt.h"
+#include "netio.h"
 
-void prompt(void)
+void prompt(int sock)
 {
-    printf("%% ");
+    net_write(sock, "% ", 3);
 }

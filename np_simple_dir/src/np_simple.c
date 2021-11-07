@@ -77,17 +77,19 @@ int main(int argc, char **argv)
             close(ss);
 
             // Redirect fd
-            dup2(cs, STDIN_FILENO);
-            dup2(cs, STDOUT_FILENO);
-            dup2(cs, STDERR_FILENO);
+            // dup2(cs, STDIN_FILENO);
+            // dup2(cs, STDOUT_FILENO);
+            // dup2(cs, STDERR_FILENO);
 
             // Set buffer mode to NOBUF
-            setvbuf(stdin, NULL, _IONBF, 0);
-            setvbuf(stdout, NULL, _IONBF, 0);
-            setvbuf(stderr, NULL, _IONBF, 0);
+            // setvbuf(stdin, NULL, _IONBF, 0);
+            // setvbuf(stdout, NULL, _IONBF, 0);
+            // setvbuf(stderr, NULL, _IONBF, 0);
 
             // Run npshell
-            npshell_run();
+            npshell_run(cs);
+
+            exit(0);
         } else {
             // TODO: Handle fork error
         }

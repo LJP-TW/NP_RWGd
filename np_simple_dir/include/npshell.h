@@ -1,6 +1,7 @@
 #ifndef NPSHELL_H
 #define NPSHELL_H
 
-extern int npshell_run(void);
+// cs: client socket
+extern int npshell_run(int cs);
 
 #endif

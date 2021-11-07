@@ -55,10 +55,10 @@ extern void cmd_init();
 
 // Read line to cmd_line buffer
 // return the length of bytes received
-extern int cmd_read(char *cmd_line);
+extern int cmd_read(int sock, char *cmd_line);
 
-extern cmd_node* cmd_parse(char *cmd_line);
+extern cmd_node* cmd_parse(int sock, char *cmd_line);
 
-extern int cmd_run(cmd_node *cmd);
+extern int cmd_run(int sock, cmd_node *cmd);
 
 #endif

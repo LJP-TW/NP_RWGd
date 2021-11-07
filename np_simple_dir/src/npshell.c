@@ -8,7 +8,7 @@
 
 static void npshell_init(void);
 
-int npshell_run(void)
+int npshell_run(int cs)
 {
     char cmd_line[MAX_CMDLINE_LEN] = { 0 };
     int cmd_line_len;
@@ -20,18 +20,24 @@ int npshell_run(void)
     // Main shell loop
     while (1) {
         // Outputing Prompt
-        prompt();
+        prompt(cs);
 
         // Reading command
-        cmd_line_len = cmd_read(cmd_line);
+        cmd_line_len = cmd_read(cs, cmd_line);
 
-        if (!cmd_line_len) {
+        if (cmd_line_len == -1) {
+            // Disconnect
+            return 1;
+        } else if (!cmd_line_len) {
             // Empty command
+            // Outputing Prompt
+            prompt(cs);
+
             continue;
         }
 
         // Parsing command
-        cmd = cmd_parse(cmd_line);
+        cmd = cmd_parse(cs, cmd_line);
 
         // Debug
 #ifdef DEBUG
@@ -53,7 +59,7 @@ int npshell_run(void)
 #endif
 
         // Executing command
-        cmd_run(cmd);
+        cmd_run(cs, cmd);
     }
 }
 
