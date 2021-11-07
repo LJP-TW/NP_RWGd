@@ -132,31 +132,30 @@ static void cmd_node_release(cmd_node *cmd)
 
 int cmd_read(int sock, char *cmd_line)
 {
-    int len, slen;
+    int idx = 0;
 
-    len = net_read(sock, cmd_line, MAX_CMDLINE_LEN);
-
-    if (len == 0) {
-        return -1;
-    }
-
-    slen = strlen(cmd_line);
-
-    if (slen < len) {
-        len = slen;
-    }
-
-    if (len >= 1 && cmd_line[len-1] == '\n') {
-        if (len >= 2 && cmd_line[len-2] == '\r') {
-            cmd_line[len-2] = 0;
-            len -= 2;
-        } else {
-            cmd_line[len-1] = 0;
-            len -= 1;
+    while (idx < MAX_CMDLINE_LEN) {
+        if (!net_read(sock, cmd_line + idx, 1)) {
+            return -1;
         }
+
+        if (cmd_line[idx] == '\n') {
+            if (cmd_line[idx-1] == '\r') {
+                cmd_line[idx-1] = 0;
+                return idx - 1;
+            }
+            cmd_line[idx] = 0;
+            return idx;
+        }
+
+        if (cmd_line[idx] == 0) {
+            return idx;
+        }
+
+        idx += 1;
     }
 
-    return len;
+    return idx;
 }
 
 static int valid_filepath(char *filepath)
