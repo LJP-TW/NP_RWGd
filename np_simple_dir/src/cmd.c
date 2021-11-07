@@ -92,6 +92,7 @@ void cmd_init()
     // Init closed pid_list
     closed_plist    = plist_init();
     sh_closed_plist = plist_init();
+    alive_plist     = plist_init();
 
     // Init sigset
     sigemptyset(&sigset_SIGCHLD);
@@ -688,6 +689,7 @@ int cmd_run(int sock, cmd_node *cmd)
 
     // Update pid list
     plist_merge(closed_plist, sh_closed_plist);
+    plist_delete_intersect(alive_plist, closed_plist);
 
     if (!np_out) {
         int status;

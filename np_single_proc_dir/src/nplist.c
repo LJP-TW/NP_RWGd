@@ -104,38 +104,6 @@ void nplist_remove_by_numbered(np_list *list, int numbered)
     }
 }
 
-void nplist_close_all_writeend_except_numbered(np_list *list, int numbered)
-{
-    np_node **np_ptr;
-    np_node *np_cur;
-    
-    // Find corresponding numbered pipe
-    np_ptr = &(list->head);
-    while ((np_cur = *np_ptr)) {
-        np_ptr = &(np_cur->next);
-
-        if (np_cur->numbered != numbered) {
-            close(np_cur->fd[1]);
-            np_cur->fd[1] = -1;
-        }
-    }
-}
-
-void nplist_close_all_writeend(np_list *list)
-{
-    np_node **np_ptr;
-    np_node *np_cur;
-    
-    // Find corresponding numbered pipe
-    np_ptr = &(list->head);
-    while ((np_cur = *np_ptr)) {
-        np_ptr = &(np_cur->next);
-
-        close(np_cur->fd[1]);
-        np_cur->fd[1] = -1;
-    }
-}
-
 np_node* nplist_insert(np_list *list, int numbered)
 {
     np_node *new_np = npnode_init(numbered);

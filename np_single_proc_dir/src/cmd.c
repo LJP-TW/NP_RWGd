@@ -760,19 +760,19 @@ int cmd_run(user *user, cmd_node *cmd)
 
         if (origin_np_in) {
             plist_delete_intersect(origin_np_in->plist, closed_plist);
-            for (pid_node *pn = origin_np_in->plist->next; pn; pn = pn->next) {
+            for (pid_node *pn = origin_np_in->plist->head; pn; pn = pn->next) {
                 waitpid(pn->pid, &status, 0);
             }
         } else if (origin_up_in) {
             plist_delete_intersect(origin_up_in->plist, closed_plist);
-            for (pid_node *pn = origin_up_in->plist->next; pn; pn = pn->next) {
+            for (pid_node *pn = origin_up_in->plist->head; pn; pn = pn->next) {
                 waitpid(pn->pid, &status, 0);
             }
         }
 
         // Wait for plist
         plist_delete_intersect(plist, closed_plist);
-        for (pid_node *pn = plist->next; pn; pn = pn->next) {
+        for (pid_node *pn = plist->head; pn; pn = pn->next) {
             waitpid(pn->pid, &status, 0);
         }
 

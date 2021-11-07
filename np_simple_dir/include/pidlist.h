@@ -12,12 +12,13 @@ struct pid_node_tag {
 typedef struct pid_node_list_tag pid_list;
 struct pid_node_list_tag {
     pid_node *head;
-    pid_node **last;
+    pid_node **tail;
     int len;
 };
 
 extern pid_list *closed_plist;
 extern pid_list *sh_closed_plist;
+extern pid_list *alive_plist;
 
 extern pid_list* plist_init();
 

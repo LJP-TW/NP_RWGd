@@ -26,10 +26,6 @@ extern np_node* nplist_find_by_numbered(np_list *list, int numbered);
 
 extern void nplist_remove_by_numbered(np_list *list, int numbered);
 
-extern void nplist_close_all_writeend_except_numbered(np_list *list, int numbered);
-
-extern void nplist_close_all_writeend(np_list *list);
-
 extern np_node* nplist_insert(np_list *list, int numbered);
 
 extern void nplist_update(np_list *list);
