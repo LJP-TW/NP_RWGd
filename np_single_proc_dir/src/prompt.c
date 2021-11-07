@@ -7,7 +7,7 @@
 
 void prompt(int sock)
 {
-    net_write(sock, "% ", 3);
+    msg_tell(sock, "% ");
 }
 
 void msg_tell(int sock, char *msg)
