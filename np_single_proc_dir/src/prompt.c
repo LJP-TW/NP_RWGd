@@ -17,9 +17,9 @@ void msg_tell(int sock, char *msg)
 
 void msg_motd(int sock)
 {
-    char msg[] = "***************************************\n"
-                 "** Welcome to the information server **\n"
-                 "***************************************\n";
+    char msg[] = "****************************************\n"
+                 "** Welcome to the information server. **\n"
+                 "****************************************\n";
 
     msg_tell(sock, msg);
 }
