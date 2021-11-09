@@ -14,7 +14,7 @@ static void np_multi_proc_init(void);
 
 static void SIGINT_handler(int signum);
 
-// ./np_simple 12345 # Listen on 0.0.0.0:12345
+// ./np_multi_proc 12345 # Listen on 0.0.0.0:12345
 int main(int argc, char **argv)
 {
     int port;
