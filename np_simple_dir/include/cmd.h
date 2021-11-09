@@ -43,19 +43,7 @@ struct cmd_node_tag {
     int numbered; 
 };
 
-typedef struct numbered_pipe_node_tag np_node;
-struct numbered_pipe_node_tag {
-    np_node *next;
-    pid_list *plist;
-    int numbered;
-    int fd[2];
-};
-
 extern void cmd_init();
-
-// Read line to cmd_line buffer
-// return the length of bytes received
-extern int cmd_read(int sock, char *cmd_line);
 
 extern cmd_node* cmd_parse(int sock, char *cmd_line);
 

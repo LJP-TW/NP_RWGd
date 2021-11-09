@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "npshell.h"
+#include "netio.h"
 #include "sys_variable.h"
 #include "prompt.h"
 #include "cmd.h"
@@ -23,16 +24,13 @@ int npshell_run(int cs)
         prompt(cs);
 
         // Reading command
-        cmd_line_len = cmd_read(cs, cmd_line);
+        cmd_line_len = net_readline(cs, cmd_line, MAX_CMDLINE_LEN);
 
         if (cmd_line_len == -1) {
             // Disconnect
             return 1;
         } else if (!cmd_line_len) {
             // Empty command
-            // Outputing Prompt
-            prompt(cs);
-
             continue;
         }
 

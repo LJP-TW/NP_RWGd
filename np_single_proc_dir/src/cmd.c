@@ -94,7 +94,7 @@ void cmd_init()
     // Register signal handler
     signal(SIGCHLD, signal_handler);
 
-    // Init closed pid_list
+    // Init pid_list
     closed_plist    = plist_init();
     sh_closed_plist = plist_init();
     alive_plist     = plist_init();
@@ -136,31 +136,6 @@ static void cmd_node_release(cmd_node *cmd)
     if (cmd->rd_output)
         free(cmd->rd_output);
     free(cmd);
-}
-
-int cmd_read(int sock, char *cmd_line)
-{
-    int len;
-
-    len = net_read(sock, cmd_line, MAX_CMDLINE_LEN);
-
-    if (len == 0) {
-        return -1;
-    }
-
-    len = strlen(cmd_line);
-
-    if (len >= 1 && cmd_line[len-1] == '\n') {
-        if (len >= 2 && cmd_line[len-2] == '\r') {
-            cmd_line[len-2] = 0;
-            len -= 2;
-        } else {
-            cmd_line[len-1] = 0;
-            len -= 1;
-        }
-    }
-
-    return len;
 }
 
 static int valid_filepath(char *filepath)

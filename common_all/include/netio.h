@@ -4,6 +4,10 @@
 #include <unistd.h>
 
 extern int net_write(int sock, char *buf, size_t len);
+
 extern int net_read(int sock, char *buf, size_t len);
+
+// Trim prefix space
+extern int net_readline(int sock, char *buf, size_t max_len);
 
 #endif

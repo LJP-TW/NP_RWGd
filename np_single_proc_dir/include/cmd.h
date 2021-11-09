@@ -58,10 +58,6 @@ struct cmd_node_tag {
 
 extern void cmd_init(void);
 
-// Read line to cmd_line buffer
-// return the length of bytes received
-extern int cmd_read(int sock, char *cmd_line);
-
 extern cmd_node* cmd_parse(user *user, char *cmd_line);
 
 extern int cmd_run(user *user, cmd_node *cmd);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "npshell.h"
+#include "netio.h"
 #include "sys_variable.h"
 #include "prompt.h"
 #include "cmd.h"
@@ -14,7 +15,7 @@ int npshell_run_single_command(user *user)
     cmd_node *cmd;
 
     // Reading command
-    cmd_line_len = cmd_read(user->sock, cmd_line);
+    cmd_line_len = net_readline(user->sock, cmd_line, MAX_CMDLINE_LEN);
 
     if (cmd_line_len == -1) {
         // Disconnect
