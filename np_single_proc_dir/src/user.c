@@ -240,7 +240,7 @@ void user_cmd_yell(user *user, char *msg)
 {
     char buf[0x40] = { 0 };
 
-    sprintf(buf, "*** %s yelled ***:  ", user->name);
+    sprintf(buf, "*** %s yelled ***: ", user->name);
 
     msg_broadcast(buf);
     msg_broadcast(msg);
