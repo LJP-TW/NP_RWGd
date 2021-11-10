@@ -14,6 +14,7 @@
 #include "nplist.h"
 #include "prompt.h"
 #include "npshell.h"
+#include "user.h"
 
 #define ASCII_SPACE 0x20
 
@@ -28,7 +29,11 @@ extern char** environ;
 
 const char *bulitin_cmds[] = {"setenv", 
                               "printenv", 
-                              "exit"};
+                              "exit",
+                              "who",
+                              "tell",
+                              "yell",
+                              "name",};
 
 const char *special_symbols[] = {">", 
                                  "|",
@@ -63,7 +68,7 @@ static void signal_handler(int signum)
     case SIGUSR1:
         // Broadcast message
         msg_read_wait();
-        
+
         msg_tell(global_sock, global_msg.msg);
 
         msg_read_signal();
@@ -259,6 +264,19 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
     case 2:
         // exit
         return -1;
+        break;
+    case 3:
+        // who
+        user_cmd_who();
+        break;
+    case 4:
+        // tell
+        break;
+    case 5:
+        // yell
+        break;
+    case 6:
+        // name
         break;
     }
 

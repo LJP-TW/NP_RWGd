@@ -8,6 +8,7 @@
 
 #include "user.h"
 #include "prompt.h"
+#include "npshell.h"
 
 #define MAX_USER_CNT 30
 
@@ -109,4 +110,40 @@ void user_broadcast(char *msg)
     }
 
     msg_write_signal();
+}
+
+void user_cmd_who(void)
+{
+    char buf[0x30] = { 0 };
+
+    msg_tell(global_sock, "<ID>\t<nickname>\t<IP:port>\t<indicate me>\n");
+
+    sem_wait();
+
+    for (int i = 0; i < MAX_USER_CNT; ++i) {
+        if (user_manager.all_users[i].inused) {
+            // ID
+            sprintf(buf, "%d\t", i);
+            msg_tell(global_sock, buf);
+
+            // Nickname
+            sprintf(buf, "%s\t", user_manager.all_users[i].name);
+            msg_tell(global_sock, buf);
+
+            // IP:Port
+            sprintf(buf, "%s:%d\t", \
+                    user_manager.all_users[i].ip, \
+                    user_manager.all_users[i].port);
+            msg_tell(global_sock, buf);
+
+            // Is me?
+            if (i == global_uid) {
+                msg_tell(global_sock, "<-me");
+            }
+        
+            msg_tell(global_sock, "\n");
+        }
+    }
+
+    sem_signal();
 }

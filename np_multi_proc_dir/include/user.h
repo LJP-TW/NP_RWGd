@@ -43,4 +43,6 @@ extern void user_release(uint32_t uid);
 
 extern void user_broadcast(char *msg);
 
+extern void user_cmd_who(void);
+
 #endif
