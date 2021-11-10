@@ -37,7 +37,8 @@ const char *bulitin_cmds[] = {"setenv",
 
 const char *special_symbols[] = {">", 
                                  "|",
-                                 "!"};
+                                 "!",
+                                 "<"};
 
 static np_list *global_nplist;
 static int use_sh_wait;
@@ -69,9 +70,17 @@ static void signal_handler(int signum)
         // Broadcast message
         msg_read_wait();
 
-        msg_tell(global_sock, global_msg.msg);
+        msg_tell(global_sock, global_msg.msg->content);
+
+        if (global_msg.msg->type & MSG_LOGOUT) {
+            user_pipe_release(global_msg.msg->uid);
+        }
 
         msg_read_signal();
+        break;
+    case SIGUSR2:
+        // Open user fifo pipe
+         user_pipe_open();
         break;
     default:
         break;
@@ -105,6 +114,7 @@ void cmd_init()
     // Register signal handler
     signal(SIGCHLD, signal_handler);
     signal(SIGUSR1, signal_handler);
+    signal(SIGUSR2, signal_handler);
 
     // Init pid_list
     closed_plist    = plist_init();
@@ -131,6 +141,8 @@ static cmd_node* cmd_node_init()
     node->argv_len = 0;
     node->pipetype = 0;
     node->numbered = 0;
+    node->to_uid = 0;
+    node->from_uid = 0;
 
     return node;
 }
@@ -141,6 +153,7 @@ static void cmd_node_release(cmd_node *cmd)
 
     if (cmd->cmd)
         free(cmd->cmd);
+    // cmd->cmd_line free in cmd_run
     for (cur_an = cmd->argv; cur_an; cur_an = next_an) {
         next_an = cur_an->next;
         free(cur_an->argv);
@@ -175,56 +188,98 @@ static int cmd_parse_special_symbols(cmd_node *cmd, char **token_ptr, int ssidx)
 {
     // Parse special symbols
     char *token = *token_ptr;
+    char c;
     int number;
+    int uid;
 
-    switch (ssidx)
-    {
-    case 0:
-        // >
-        // Stdout redirection (cmd > file)
-        if ((token = strtok(NULL, " ")) != NULL) {
-            cmd->rd_output = strdup(token);
-            cmd->pipetype = PIPE_FIL_STDOUT;
-            *token_ptr = token;
-        } else {
-            // TODO: Report error
-        }
-        break;
-    
-    case 1:
-        // |
-        if (token[1] == 0) {
-            // Ordinary pipe
-            // cmd1 | cmd2
-            cmd->pipetype = PIPE_ORDINARY;
-        } else {
+    while (ssidx != -1) {
+        switch (ssidx) {
+        case 0:
+            // >
+            if (token[1] == 0) {
+                // Stdout redirection (cmd > file)
+                // cmd1 > filename
+                if ((token = strtok(NULL, " ")) != NULL) {
+                    cmd->rd_output = strdup(token);
+                    cmd->pipetype |= PIPE_FIL_STDOUT;
+                    *token_ptr = token;
+                }
+                // TODO: Report error
+            } else {
+                // User pipe
+                // cmd1 >2
+                uid = atoi(&token[1]);
+                if (uid > 30) {
+                    // TODO: Handle error
+                }
+                cmd->pipetype |= PIPE_USR_STDOUT;
+                cmd->to_uid = uid;
+            }
+
+            break;
+
+        case 1:
+            // |
+            if (token[1] == 0) {
+                // Ordinary pipe
+                // cmd1 | cmd2
+                cmd->pipetype |= PIPE_ORDINARY;
+                return 0;
+            } else {
+                // Numbered pipe
+                // cmd1 |2
+                number = atoi(&token[1]);
+                if (number == 0) {
+                    // TODO: Report error
+                } else {
+                    cmd->pipetype |= PIPE_NUM_STDOUT;
+                    cmd->numbered = number;
+                }
+            }
+            break;
+
+        case 2:
+            // !
             // Numbered pipe
-            // cmd1 |2
+            // cmd !2
             number = atoi(&token[1]);
             if (number == 0) {
                 // TODO: Report error
             } else {
-                cmd->pipetype = PIPE_NUM_STDOUT;
+                cmd->pipetype |= PIPE_NUM_OUTERR;
                 cmd->numbered = number;
             }
-        }
-        break;
+            break;
 
-    case 2:
-        // !
-        // Numbered pipe
-        // cmd !2
-        number = atoi(&token[1]);
-        if (number == 0) {
-            // TODO: Report error
-        } else {
-            cmd->pipetype = PIPE_NUM_OUTERR;
-            cmd->numbered = number;
+        case 3:
+            // <
+            // User pipe
+            // cmd <2
+            uid = atoi(&token[1]);
+            if (uid > 30) {
+                // TODO: Handle error
+            }
+            cmd->pipetype |= PIPE_USR_STDIN;
+            cmd->from_uid = uid;
+            break;
+
+        default:
+            break;
         }
-        break;
-    
-    default:
-        break;
+
+        if (!(token = strtok(NULL, " "))) {
+            break;
+        }
+
+        c = token[0];
+        ssidx = -1;
+
+        for (int i = 0; i < ARR_LEN(special_symbols); ++i) {
+            if (special_symbols[i][0] == c) {
+                ssidx = i;
+                break;
+            }
+        }
     }
 
     return 0;
@@ -306,12 +361,17 @@ cmd_node* cmd_parse(char *cmd_line)
     int bulitin_cmd_id = -1;
     char c;
     int cmd_len = 0;
+    char *origin_cmd_line;
     char *strtok_arg1 = cmd_line;
     char *token;
     cmd_node *cmd_head;
     cmd_node *cmd;
     cmd_node **curcmd = &cmd_head;
     argv_node *argv;
+
+    origin_cmd_line = strdup(cmd_line);
+
+    // TODO: Fix Bug, Prefix space and no command
 
     // Parse command
     while ((token = strtok(strtok_arg1, " ")) != NULL) {
@@ -354,6 +414,7 @@ cmd_node* cmd_parse(char *cmd_line)
         }
         
         // Ok, save this command
+        cmd->cmd_line = origin_cmd_line;
         cmd->cmd = strdup(token);
         cmd_len += 1;
 
@@ -400,6 +461,9 @@ cmd_node* cmd_parse(char *cmd_line)
     return cmd_head;
 }
 
+/*
+ * cmd_node *cmd can be NULL
+ */
 int cmd_run(cmd_node *cmd)
 {
     pid_t pid;
@@ -407,6 +471,10 @@ int cmd_run(cmd_node *cmd)
     np_node *np_out = NULL;
     cmd_node *next_cmd;
     np_node *np_in, *origin_np_in;
+    uint32_t from_uid;
+    int origin_up_in = 0, up_in = 0;  // user pipe in fd
+    int up_out = 0; // user pipe out fd
+    char *cmd_line = NULL;
 
     plist = plist_init();
 
@@ -417,6 +485,17 @@ int cmd_run(cmd_node *cmd)
     nplist_update(global_nplist);
     origin_np_in = np_in = nplist_find_by_numbered(global_nplist, 0);
 
+    // Handle input pipe
+    if (cmd) {
+        cmd_line = cmd->cmd_line;
+
+        // Only one pipe will be directed to stdin at the same time
+        if (!np_in && (cmd->pipetype & PIPE_USR_STDIN)) {
+            origin_up_in = up_in = user_pipe_from(cmd->from_uid, cmd_line);
+            from_uid = cmd->from_uid;
+        }
+    }
+
     while (cmd) {
         int cur_pipe[2] = {-1, -1};
         int filefd = -1;
@@ -424,27 +503,31 @@ int cmd_run(cmd_node *cmd)
         next_cmd = cmd->next;
 
         // Handle pipe
-        switch(cmd->pipetype) {
-        case PIPE_ORDINARY:
+        if (cmd->pipetype & PIPE_ORDINARY) {
             if (pipe(cur_pipe)) {
                 printf("[x] pipe error: %d\n", errno);
             }
-            break;
-        case PIPE_NUM_STDOUT:
-        case PIPE_NUM_OUTERR:
+        }
+
+        // When a fork error occurs, np_out may have a value,
+        // we don't need to allocate np_out again.
+        if (!np_out && (cmd->pipetype & PIPE_NUM)) {
             if (cmd->numbered) {
                 np_out = nplist_find_by_numbered(global_nplist, cmd->numbered);
                 if (!np_out) {
                     np_out = nplist_insert(global_nplist, cmd->numbered);
                 }
             }
-            break;
-        case PIPE_FIL_STDOUT:
+        }
+
+        if (cmd->pipetype & PIPE_FIL_STDOUT) {
             filefd = open(cmd->rd_output, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
-            break;
-        default:
-            // No pipe
-            break;
+        }
+
+        // When a fork error occurs, up_out may have a value,
+        // we don't need to allocate up_out again.
+        if (!up_out && (cmd->pipetype & PIPE_USR_STDOUT)) {
+            up_out = user_pipe_to(cmd->to_uid, cmd_line);
         }
 
         // Execute command
@@ -469,6 +552,9 @@ int cmd_run(cmd_node *cmd)
             // Handle numbered pipe
             np_in = NULL;
 
+            // Handle user pipe
+            up_in = 0;
+
             // Handle file pipe
             if (filefd != -1) {
                 close(filefd);
@@ -490,6 +576,8 @@ int cmd_run(cmd_node *cmd)
 
             if (np_in) {
                 dup2(np_in->fd[0], STDIN_FILENO);
+            } else if (up_in) {
+                dup2(up_in, STDIN_FILENO);
             } else if (read_pipe != -1) {
                 dup2(read_pipe, STDIN_FILENO);
             }
@@ -499,25 +587,28 @@ int cmd_run(cmd_node *cmd)
             dup2(global_sock, STDOUT_FILENO);
             dup2(global_sock, STDERR_FILENO);
 
-            switch(cmd->pipetype) {
-            case PIPE_ORDINARY:
+            if (cmd->pipetype & PIPE_ORDINARY) {
                 close(cur_pipe[0]);
                 dup2(cur_pipe[1], STDOUT_FILENO);
-                break;
-            case PIPE_NUM_STDOUT:
+            }
+
+            if (cmd->pipetype & PIPE_NUM_STDOUT) {
                 close(np_out->fd[0]);
                 dup2(np_out->fd[1], STDOUT_FILENO);
-                break;
-            case PIPE_NUM_OUTERR:
+            }
+
+            if (cmd->pipetype & PIPE_NUM_OUTERR) {
                 close(np_out->fd[0]);
                 dup2(np_out->fd[1], STDOUT_FILENO);
                 dup2(np_out->fd[1], STDERR_FILENO);
-                break;
-            case PIPE_FIL_STDOUT:
+            }
+
+            if (cmd->pipetype & PIPE_FIL_STDOUT) {
                 dup2(filefd, STDOUT_FILENO);
-            default:
-                // No pipe
-                break;
+            }
+
+            if (up_out) {
+                dup2(up_out, STDOUT_FILENO);
             }
 
             // Close pipe
@@ -555,27 +646,25 @@ int cmd_run(cmd_node *cmd)
             plist_delete_intersect(plist, closed_plist);
 
             // Recycle all the resources
-            switch(cmd->pipetype) {
-            case PIPE_ORDINARY:
+            if (cmd->pipetype & PIPE_ORDINARY) {
                 if (cur_pipe[0] != -1) {
                     close(cur_pipe[0]);
                     close(cur_pipe[1]);
                 }
-                break;
-            case PIPE_NUM_STDOUT:
-            case PIPE_NUM_OUTERR:
+            }
+
+            if (cmd->pipetype & PIPE_NUM) {
                 if (cmd->numbered) {
                     nplist_remove_by_numbered(global_nplist, cmd->numbered);
                 }
-                break;
-            case PIPE_FIL_STDOUT:
+            }
+
+            if (cmd->pipetype & PIPE_FIL_STDOUT) {
                 if (filefd != -1)
                     close(filefd);
-                break;
-            default:
-                // No pipe
-                break;
             }
+
+            // No need to reclaim up_out
 
             enable_sh();
 
@@ -596,10 +685,27 @@ int cmd_run(cmd_node *cmd)
     plist_merge(closed_plist, sh_closed_plist);
     plist_delete_intersect(alive_plist, closed_plist);
 
-    if (!np_out) {
+    if (np_out) {
+        if (origin_np_in) {
+            plist_merge(plist, origin_np_in->plist);
+        }
+
+        // Update np_out->plist    
+        if (!(np_out->plist)) {
+            np_out->plist = plist;
+        } else {
+            plist_merge(np_out->plist, plist);
+            plist_release(plist);
+        }
+    } else if (up_out) {
+        if (origin_np_in) {
+            plist_merge(plist, origin_np_in->plist);
+        }
+
+        plist_release(plist);
+    } else {
         int status;
 
-        // Wait for origin_np_in
         if (origin_np_in) {
             plist_delete_intersect(origin_np_in->plist, closed_plist);
             for (pid_node *pn = origin_np_in->plist->head; pn; pn = pn->next) {
@@ -615,22 +721,22 @@ int cmd_run(cmd_node *cmd)
 
         // Free plist
         plist_release(plist);
-    } else {
-        // If there is origin_np_in, merge origin_np_in to plist
-        if (origin_np_in) {
-            plist_merge(plist, origin_np_in->plist);
-        }
+    }
 
-        // Update np_out->plist    
-        if (!(np_out->plist)) {
-            np_out->plist = plist;
-        } else {
-            plist_merge(np_out->plist, plist);
-            plist_release(plist);
-        }
+    // Close user pipe
+    if (origin_up_in) {
+        user_pipe_release(from_uid);
+    }
+
+    if (up_out) {
+        close(up_out);
     }
 
     enable_sh();
+
+    if (cmd_line) {
+        free(cmd_line);
+    }
 
     return 0;
 }

@@ -10,12 +10,13 @@ message_buf global_msg;
 
 void global_msg_init(void)
 {
-    global_msg.shmid = shmget(IPC_PRIVATE, sizeof(char) * MAX_MSG_LEN, \
+    global_msg.shmid = shmget(IPC_PRIVATE, sizeof(message), \
                               IPC_CREAT | IPC_EXCL | 0600);
     
     global_msg.msg = shmat(global_msg.shmid, NULL, 0);
 
-    global_msg.msg[0] = 0;
+    global_msg.msg->type = 0;
+    global_msg.msg->content[0] = 0;
 
     // Semaphore of user_manager
     global_msg.semid = semget(IPC_PRIVATE, 2, IPC_CREAT | IPC_EXCL | 0600);

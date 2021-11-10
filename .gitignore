@@ -19,6 +19,9 @@ np_multi_proc
 # vscode file
 .vscode
 
+# directory for this project
+/user_pipe
+
 # bin for this project
 /bin
 

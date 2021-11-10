@@ -5,10 +5,14 @@
 
 #include "pidlist.h"
 
-#define PIPE_ORDINARY   1
-#define PIPE_NUM_STDOUT 2
-#define PIPE_NUM_OUTERR 3
-#define PIPE_FIL_STDOUT 4
+#define PIPE_ORDINARY   0x00000001
+#define PIPE_NUM_STDOUT 0x00000002
+#define PIPE_NUM_OUTERR 0x00000004
+#define PIPE_FIL_STDOUT 0x00000008
+#define PIPE_USR_STDOUT 0x00000010
+#define PIPE_USR_STDIN  0x00000020
+
+#define PIPE_NUM        (PIPE_NUM_STDOUT | PIPE_NUM_OUTERR)
 
 typedef struct argv_node_tag argv_node;
 struct argv_node_tag {
@@ -23,6 +27,7 @@ struct cmd_node_tag {
 
     // Command
     char *cmd;
+    char *cmd_line;
 
     // Arguments
     argv_node *argv;
@@ -39,10 +44,15 @@ struct cmd_node_tag {
     // 2: |x  PIPE_NUM_STDOUT Pipe stdout
     // 3: !x  PIPE_NUM_OUTERR Pipe stdout and stderr
     // 4: > f PIPE_FIL_STDOUT Pipe stdout to file
+    // 5: >x  PIPE_USR_STDOUT Pipe stdout to uid
+    // 6: <x  PIPE_USR_STDIN  Pipe user pipe to stdin
     int pipetype;
 
     // Numbered Pipe
     int numbered; 
+
+    // User Pipe
+    uint32_t to_uid, from_uid; 
 };
 
 extern void cmd_init();

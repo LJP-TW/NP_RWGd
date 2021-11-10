@@ -93,7 +93,7 @@ int main(int argc, char **argv)
                 user_manager.all_users[uid].ip,
                 user_manager.all_users[uid].port);
 
-            user_broadcast(msgbuf);
+            user_broadcast(msgbuf, MSG_NONE);
             msg_tell(cs, msgbuf);
 
             // Close unused fd
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
             sprintf(msgbuf, "*** User '%s' left. ***\n", \
                 user_manager.all_users[uid].name);
 
-            user_broadcast(msgbuf);
+            user_broadcast(msgbuf, MSG_LOGOUT);
 
             user_release(uid);
 

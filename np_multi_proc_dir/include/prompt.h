@@ -3,10 +3,21 @@
 
 #define MAX_MSG_LEN 0xf00
 
+// Message type
+#define MSG_NONE   0
+#define MSG_LOGOUT 1
+
+typedef struct message_tag message;
+struct message_tag {
+    int type;
+    int uid;
+    char content[MAX_MSG_LEN];
+};
+
 typedef struct message_buf_tag message_buf;
 struct message_buf_tag {
     // msg resides in shared memory
-    char *msg;
+    message *msg;
 
     int shmid; // shared memory id
 
