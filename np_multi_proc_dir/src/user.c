@@ -10,7 +10,7 @@
 #include "prompt.h"
 #include "npshell.h"
 
-#define MAX_USER_CNT 30
+#define MAX_USER_ID 30
 
 user_manager_struct user_manager;
 
@@ -36,7 +36,8 @@ static void sem_signal(void)
 void user_manager_init(void)
 {
     // all_users    
-    user_manager.shmid = shmget(IPC_PRIVATE, sizeof(user) * MAX_USER_CNT, \
+    user_manager.shmid = shmget(IPC_PRIVATE, 
+                                sizeof(user) * (MAX_USER_ID + 1), \
                                 IPC_CREAT | IPC_EXCL | 0600);
 
     // Semaphore of user_manager
@@ -47,7 +48,7 @@ void user_manager_init(void)
     // Init all_users array
     user_manager.all_users = shmat(user_manager.shmid, NULL, 0);
 
-    for (int i = 0; i < MAX_USER_CNT; ++i) {
+    for (int i = 1; i <= MAX_USER_ID; ++i) {
         user_manager.all_users[i].inused = 0;
     }
 
@@ -95,6 +96,25 @@ void user_release(uint32_t uid)
     sem_signal();
 }
 
+uint32_t user_find_by_name(char *name)
+{
+    sem_wait();
+
+    for (int i = 1; i <= MAX_USER_ID; ++i) {
+        if (user_manager.all_users[i].inused) {
+            if (!strcmp(user_manager.all_users[i].name, name)) {
+                sem_signal();
+
+                return i;
+            }
+        }
+    }
+
+    sem_signal();
+
+    return 0;
+}
+
 void user_broadcast(char *msg)
 {
     msg_write_wait();
@@ -102,14 +122,14 @@ void user_broadcast(char *msg)
     // Write message
     strncpy(global_msg.msg, msg, MAX_MSG_LEN);
 
+    msg_write_signal();
+
     // Send signal to notify client to read message
-    for (int i = 0; i < MAX_USER_CNT; ++i) {
+    for (int i = 1; i < MAX_USER_ID; ++i) {
         if (user_manager.all_users[i].inused) {
             kill(user_manager.all_users[i].pid, SIGUSR1);
         }
     }
-
-    msg_write_signal();
 }
 
 void user_cmd_who(void)
@@ -120,7 +140,7 @@ void user_cmd_who(void)
 
     sem_wait();
 
-    for (int i = 0; i < MAX_USER_CNT; ++i) {
+    for (int i = 1; i < MAX_USER_ID; ++i) {
         if (user_manager.all_users[i].inused) {
             // ID
             sprintf(buf, "%d\t", i);
@@ -146,4 +166,28 @@ void user_cmd_who(void)
     }
 
     sem_signal();
+}
+
+void user_cmd_name(char *name)
+{
+    char buf[0x50] = { 0 };
+    uint32_t uid = user_find_by_name(name);
+
+    if (uid) {
+        sprintf(buf, "*** User '%s' already exists. ***\n", name);
+        msg_tell(global_sock, buf);
+    } else {
+        sem_wait();
+        strcpy(user_manager.all_users[global_uid].name, name);
+
+        // e.g. *** User from 140.113.215.62:1201 is named 'Mike'. ***
+        sprintf(buf, "*** User from %s:%d is named '", \
+                user_manager.all_users[global_uid].ip, \
+                user_manager.all_users[global_uid].port);
+        sem_signal();
+
+        user_broadcast(buf);
+        user_broadcast(name);
+        user_broadcast("'. ***\n");
+    }
 }

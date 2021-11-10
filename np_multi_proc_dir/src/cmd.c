@@ -277,6 +277,9 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
         break;
     case 6:
         // name
+        if ((var = strtok(NULL, " "))) {
+            user_cmd_name(var);
+        }
         break;
     }
 

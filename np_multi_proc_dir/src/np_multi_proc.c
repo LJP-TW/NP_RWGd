@@ -84,8 +84,6 @@ int main(int argc, char **argv)
             // New user
             uid = user_new(caddr);
 
-            printf("uid: %d\n", uid);
-
             // Welcome message
             msg_motd(cs);
 
