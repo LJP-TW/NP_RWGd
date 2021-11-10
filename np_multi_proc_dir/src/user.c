@@ -168,9 +168,23 @@ void user_cmd_who(void)
     sem_signal();
 }
 
+void user_cmd_yell(char *msg)
+{
+    char *buf = malloc(sizeof(char) * strlen(msg) + 0x40);
+
+    sem_wait();
+    sprintf(buf, "*** %s yelled ***: %s\n", \
+            user_manager.all_users[global_uid].name, msg);
+    sem_signal();
+
+    user_broadcast(buf);
+
+    free(buf);
+}
+
 void user_cmd_name(char *name)
 {
-    char buf[0x50] = { 0 };
+    char buf[0x70] = { 0 };
     uint32_t uid = user_find_by_name(name);
 
     if (uid) {
@@ -181,13 +195,12 @@ void user_cmd_name(char *name)
         strcpy(user_manager.all_users[global_uid].name, name);
 
         // e.g. *** User from 140.113.215.62:1201 is named 'Mike'. ***
-        sprintf(buf, "*** User from %s:%d is named '", \
+        sprintf(buf, "*** User from %s:%d is named '%s'. ***\n", \
                 user_manager.all_users[global_uid].ip, \
-                user_manager.all_users[global_uid].port);
+                user_manager.all_users[global_uid].port, \
+                name);
         sem_signal();
 
         user_broadcast(buf);
-        user_broadcast(name);
-        user_broadcast("'. ***\n");
     }
 }

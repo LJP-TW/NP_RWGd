@@ -236,6 +236,7 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
     char *var;
     char *value;
     char *envvalue;
+    char *msg;
 
     switch (bulitin_cmd_id) {
     case 0:
@@ -274,6 +275,9 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
         break;
     case 5:
         // yell
+        msg = token + 5;
+
+        user_cmd_yell(msg);
         break;
     case 6:
         // name

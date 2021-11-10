@@ -47,6 +47,8 @@ extern void user_broadcast(char *msg);
 
 extern void user_cmd_who(void);
 
+extern void user_cmd_yell(char *msg);
+
 extern void user_cmd_name(char *name);
 
 #endif
