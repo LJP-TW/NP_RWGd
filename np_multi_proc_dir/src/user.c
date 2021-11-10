@@ -96,27 +96,24 @@ void user_release(uint32_t uid)
     sem_signal();
 }
 
-uint32_t user_find_by_name(char *name)
+static uint32_t user_find_by_name(char *name)
 {
-    sem_wait();
-
+    // Must acquire semaphore before call this function
     for (int i = 1; i <= MAX_USER_ID; ++i) {
         if (user_manager.all_users[i].inused) {
             if (!strcmp(user_manager.all_users[i].name, name)) {
-                sem_signal();
-
                 return i;
             }
         }
     }
-
-    sem_signal();
 
     return 0;
 }
 
 void user_broadcast(char *msg)
 {
+    // Must release user_manager semaphore before call this function
+
     msg_write_wait();
 
     // Write message
@@ -126,10 +123,35 @@ void user_broadcast(char *msg)
 
     // Send signal to notify client to read message
     for (int i = 1; i < MAX_USER_ID; ++i) {
+        sem_wait();
+
         if (user_manager.all_users[i].inused) {
             kill(user_manager.all_users[i].pid, SIGUSR1);
         }
+
+        sem_signal();
     }
+}
+
+static void user_tell(uint32_t uid, char *msg)
+{
+    // Must release user_manager semaphore before call this function
+
+    msg_write_wait();
+
+    // Write message
+    strncpy(global_msg.msg, msg, MAX_MSG_LEN);
+
+    msg_write_signal();
+
+    // Send signal to notify client to read message
+    sem_wait();
+
+    if (user_manager.all_users[uid].inused) {
+        kill(user_manager.all_users[uid].pid, SIGUSR1);
+    }
+
+    sem_signal();
 }
 
 void user_cmd_who(void)
@@ -168,6 +190,30 @@ void user_cmd_who(void)
     sem_signal();
 }
 
+void user_cmd_tell(uint32_t uid, char *msg)
+{
+    char *buf = malloc(sizeof(char) * strlen(msg) + 0x40);
+    
+    sem_wait();
+
+    if (user_manager.all_users[uid].inused) {
+        sprintf(buf, "*** %s told you ***: %s\n", \
+                user_manager.all_users[global_uid].name, \
+                msg);
+
+        sem_signal();
+
+        user_tell(uid, buf);
+    } else {
+        sem_signal();
+
+        sprintf(buf, "*** Error: user #%d does not exist yet. ***\n", uid);
+        msg_tell(global_sock, buf);
+    }
+
+    free(buf);
+}
+
 void user_cmd_yell(char *msg)
 {
     char *buf = malloc(sizeof(char) * strlen(msg) + 0x40);
@@ -185,13 +231,17 @@ void user_cmd_yell(char *msg)
 void user_cmd_name(char *name)
 {
     char buf[0x70] = { 0 };
+    
+    sem_wait();
+
     uint32_t uid = user_find_by_name(name);
 
     if (uid) {
+        sem_signal();
+
         sprintf(buf, "*** User '%s' already exists. ***\n", name);
         msg_tell(global_sock, buf);
     } else {
-        sem_wait();
         strcpy(user_manager.all_users[global_uid].name, name);
 
         // e.g. *** User from 140.113.215.62:1201 is named 'Mike'. ***
@@ -199,6 +249,7 @@ void user_cmd_name(char *name)
                 user_manager.all_users[global_uid].ip, \
                 user_manager.all_users[global_uid].port, \
                 name);
+
         sem_signal();
 
         user_broadcast(buf);

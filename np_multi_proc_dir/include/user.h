@@ -41,11 +41,11 @@ extern uint32_t user_new(struct sockaddr_in caddr);
 
 extern void user_release(uint32_t uid);
 
-extern uint32_t user_find_by_name(char *name);
-
 extern void user_broadcast(char *msg);
 
 extern void user_cmd_who(void);
+
+extern void user_cmd_tell(uint32_t uid, char *msg);
 
 extern void user_cmd_yell(char *msg);
 

@@ -272,6 +272,16 @@ static int cmd_parse_bulitin_cmd(cmd_node *cmd, char *token, int bulitin_cmd_id)
         break;
     case 4:
         // tell
+        if ((var = strtok(NULL, " "))) {
+            msg = var + strlen(var) + 1;
+            uint32_t to_uid = atoi(var);
+
+            if (to_uid > 30) {
+                // TODO: Handle error
+            }
+
+            user_cmd_tell(to_uid, msg);
+        }
         break;
     case 5:
         // yell
