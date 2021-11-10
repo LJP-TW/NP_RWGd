@@ -128,6 +128,7 @@ static void cmd_node_release(cmd_node *cmd)
 
     if (cmd->cmd)
         free(cmd->cmd);
+    // cmd->cmd_line free in cmd_run
     for (cur_an = cmd->argv; cur_an; cur_an = next_an) {
         next_an = cur_an->next;
         free(cur_an->argv);
@@ -439,7 +440,7 @@ int cmd_run(user *user, cmd_node *cmd)
     np_node *np_in, *origin_np_in;
     user_node *from_user_node = NULL;
     up_node *up_in = NULL, *origin_up_in = NULL;
-    char *cmd_line;
+    char *cmd_line = NULL;
     
     plist = plist_init();
 
