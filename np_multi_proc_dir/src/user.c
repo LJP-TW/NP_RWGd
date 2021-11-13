@@ -34,7 +34,7 @@ static void sem_wait(void)
 static void sem_signal(void)
 {
     struct sembuf ops[] = {
-        {0, -1, SEM_UNDO}, // sem[0] -= 1
+        {0, -1, 0}, // sem[0] -= 1
     };
 
     semop(user_manager.semid, ops, sizeof(ops) / sizeof(ops[0]));
@@ -134,7 +134,7 @@ void user_sem_write_signal(int semid)
 static void user_sem_init(int semid)
 {
     struct sembuf ops[] = {
-        {3, 1, SEM_UNDO}, // c2_sem += 1
+        {3, 1, 0}, // c2_sem += 1
     };
 
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
