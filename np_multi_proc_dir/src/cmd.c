@@ -72,7 +72,7 @@ static void signal_handler(int signum)
         break;
     case SIGUSR2:
         // Open user fifo pipe
-         user_pipe_open();
+        user_pipe_open();
         break;
     default:
         break;
