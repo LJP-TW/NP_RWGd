@@ -96,6 +96,8 @@ int main(int argc, char **argv)
             user_broadcast(msgbuf, MSG_NONE);
             msg_tell(cs, msgbuf);
 
+            msg_reset_read_offset();
+
             // Close unused fd
             close(ss);
 

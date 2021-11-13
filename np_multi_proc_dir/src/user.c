@@ -161,6 +161,8 @@ uint32_t user_new(struct sockaddr_in caddr)
 
     sem_signal();
 
+    global_msg.read_offset = global_msg.msg->write_offset;
+
     return uid;
 }
 
@@ -413,18 +415,8 @@ void user_broadcast(char *msg, int msg_type)
 {
     // Must release user_manager semaphore before call this function
 
-    msg_write_wait();
-
     // Write message
-    global_msg.msg->type = msg_type;
-
-    if (msg_type & MSG_LOGOUT) {
-        global_msg.msg->uid = global_uid;
-    }
-
-    strncpy(global_msg.msg->content, msg, MAX_MSG_LEN);
-
-    msg_write_signal();
+    msg_set_msg(msg, msg_type);
 
     // Send signal to notify client to read message
     for (int i = 1; i < MAX_USER_ID; ++i) {
@@ -442,13 +434,8 @@ static void user_tell(uint32_t uid, char *msg)
 {
     // Must release user_manager semaphore before call this function
 
-    msg_write_wait();
-
     // Write message
-    global_msg.msg->type = MSG_NONE;
-    strncpy(global_msg.msg->content, msg, MAX_MSG_LEN);
-
-    msg_write_signal();
+    msg_set_msg(msg, MSG_NONE);
 
     // Send signal to notify client to read message
     sem_wait();

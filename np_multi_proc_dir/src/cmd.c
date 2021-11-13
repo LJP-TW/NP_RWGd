@@ -68,15 +68,7 @@ static void signal_handler(int signum)
         break;
     case SIGUSR1:
         // Broadcast message
-        msg_read_wait();
-
-        msg_tell(global_sock, global_msg.msg->content);
-
-        if (global_msg.msg->type & MSG_LOGOUT) {
-            user_pipe_release(global_msg.msg->uid);
-        }
-
-        msg_read_signal();
+        msg_read_msg();
         break;
     case SIGUSR2:
         // Open user fifo pipe
