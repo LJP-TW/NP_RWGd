@@ -427,7 +427,7 @@ void user_broadcast(char *msg, int msg_type)
     msg_set_msg(msg, msg_type, 0);
 
     // Send signal to notify client to read message
-    for (int i = 1; i < MAX_USER_ID; ++i) {
+    for (int i = 1; i <= MAX_USER_ID; ++i) {
         sem_wait();
 
         if (user_manager.all_users[i].inused) {
@@ -463,7 +463,7 @@ void user_cmd_who(void)
 
     sem_wait();
 
-    for (int i = 1; i < MAX_USER_ID; ++i) {
+    for (int i = 1; i <= MAX_USER_ID; ++i) {
         if (user_manager.all_users[i].inused) {
             // ID
             sprintf(buf, "%d\t", i);
