@@ -42,7 +42,7 @@ void msg_write_wait(void)
 void msg_write_signal(void)
 {
     struct sembuf ops[] = {
-        {0, -1, SEM_UNDO}, // write_sem -= 1
+        {0, -1, 0}, // write_sem -= 1
     };
 
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
@@ -61,7 +61,7 @@ void msg_read_wait(void)
 void msg_read_signal(void)
 {
     struct sembuf ops[] = {
-        {1, -1, SEM_UNDO}, // read_sem -= 1
+        {1, -1, 0}, // read_sem -= 1
     };
 
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
