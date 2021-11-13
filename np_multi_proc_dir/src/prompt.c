@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/sem.h>
@@ -17,7 +19,7 @@ void global_msg_init(void)
     
     global_msg.msg = shmat(global_msg.shmid, NULL, 0);
 
-    global_msg.msg->type = 0;
+    // global_msg.msg->type = 0;
     global_msg.msg->write_offset = 0;
     global_msg.msg->mem[0] = 0;
 
@@ -41,14 +43,18 @@ static void msg_write_wait(void)
         {1, 0, 0},        // wait until read_sem == 0
     };
 
+    // printf("%d| msg_write_wait\n", global_uid);
+
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
 static void msg_write_signal(void)
 {
     struct sembuf ops[] = {
-        {0, -1, 0}, // write_sem -= 1
+        {0, -1, SEM_UNDO}, // write_sem -= 1
     };
+
+    // printf("%d| msg_write_signal\n", global_uid);
 
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
@@ -60,25 +66,55 @@ static void msg_read_wait(void)
         {1, 1, SEM_UNDO}, // read_sem += 1
     };
 
+    // printf("%d| msg_read_wait\n", global_uid);
+
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
 static void msg_read_signal(void)
 {
     struct sembuf ops[] = {
-        {1, -1, 0}, // read_sem -= 1
+        {1, -1, SEM_UNDO}, // read_sem -= 1
     };
+
+    // printf("%d| msg_read_signal\n", global_uid);
 
     semop(global_msg.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
-void msg_set_msg(char *msg, int msg_type)
+void msg_set_msg(char *msg_content, int msg_type, int parameter)
 {
-    int len = strlen(msg);
+    char *msg = malloc(sizeof(char) * (strlen(msg_content) + 0x10));
+    int len;
     int left_len;
     char *mem;
     int *pwo; // write_offset
     msg_str *ptr;
+
+    // Build message header
+    // Message:
+    //   "<int type> <parameter 1> <parameter 2> ... <content><MSG_STR_DELIM>"
+    //   e.g.
+    //     "1 1 ***Logout Message***<MSG_STR_DELIM>"
+    switch (msg_type)
+    {
+    case MSG_LOGOUT:
+        // "MSG_LOGOUT <logout_uid> <content><MSG_STR_DELIM>"
+        sprintf(msg, "%d %d %s%c", MSG_LOGOUT, global_uid, msg_content, MSG_STR_DELIM);
+        break;
+    
+    case MSG_TELL:
+        // "MSG_TELL <to_uid> <content><MSG_STR_DELIM>"
+        sprintf(msg, "%d %d %s%c", MSG_TELL, parameter, msg_content, MSG_STR_DELIM);
+        break;
+    
+    default:
+        // "MSG_NONE <content><MSG_STR_DELIM>"
+        sprintf(msg, "%d %s%c", MSG_NONE, msg_content, MSG_STR_DELIM);
+        break;
+    }
+
+    len = strlen(msg);
 
     msg_write_wait();
 
@@ -88,12 +124,6 @@ void msg_set_msg(char *msg, int msg_type)
     ptr = (msg_str *)&(mem[*pwo]);
     
     // Write message
-    global_msg.msg->type = msg_type;
-
-    if (msg_type & MSG_LOGOUT) {
-        global_msg.msg->uid = global_uid;
-    }
-
     // 1 for terminated NULL byte
     // 1 for msg_str tag
     if (left_len >= len + 1 + 1) {
@@ -119,23 +149,26 @@ void msg_set_msg(char *msg, int msg_type)
     }
 
     msg_write_signal();
+
+    free(msg);
 }
 
 void msg_read_msg(void)
 {
     char *mem;
     int wo; // write_offset
+    int ro;
     int *pro; // read_offset
+    int total_len = 0;
+    char *content;
+    msg_str *ptr;
 
     msg_read_wait();
 
     mem = global_msg.msg->mem;
     wo = global_msg.msg->write_offset;
     pro = &(global_msg.read_offset);
-
-    if (global_msg.msg->type & MSG_LOGOUT) {
-        user_pipe_release(global_msg.msg->uid);
-    }
+    ro = *pro;
 
     if ((unsigned char)mem[*pro] != MSG_STR_TAG) {
         // Lose some message
@@ -147,23 +180,130 @@ void msg_read_msg(void)
         return;
     }
 
+    // Get length
+    ptr = (msg_str *)&(mem[*pro]);
+    content = ptr->content;
+
     while (*pro != wo) {
         int len;
-        msg_str *ptr;
 
-        ptr = (msg_str *)&(mem[*pro]);
+        len = strlen(content);
 
-        msg_tell(global_sock, ptr->content);
+        total_len += len;
 
-        len = strlen(ptr->content);
-
-        *pro += (1 + len + 1); // 1 for msg_str tag, 1 for NULL byte
+        *pro += len + 1; // 1 for NULL byte
         *pro %= MAX_MSG_LEN;
         if (*pro + 1 == MAX_MSG_LEN) 
             *pro = 0;
+
+        content = &(mem[*pro]);
     }
+
+    // Read message
+    if (total_len) {
+        char *buf = malloc(sizeof(char) * (total_len + 1));
+        int idx = 0;
+        int msg_type;
+        int parameter;
+        char *token;
+        char *token_end;
+        char delims[] = {MSG_STR_DELIM, 0};
+
+        ptr = (msg_str *)&(mem[ro]);
+        content = ptr->content;
+
+        while (ro != wo) {
+            int len;
+
+            strcpy(&buf[idx], content);
+
+            len = strlen(content);
+            idx += len;
+
+            ro += len + 1; // 1 for NULL byte
+            ro %= MAX_MSG_LEN;
+            if (ro + 1 == MAX_MSG_LEN) 
+                ro = 0;
+
+            content = &(mem[ro]);
+        }
+
+        printf("%d| buf: %s", global_uid, buf);
+
+        msg_read_signal();
         
+        token = strtok_r(buf, delims, &token_end);
+
+        if (!token) {
+            free(buf);
+            return;
+        }
+        
+        // Unpack message
+        while (token) {
+            char *token2;
+            char *token2_end;
+            
+            printf("%d|\ttoken: %s", global_uid, token);
+            printf("%d|\t- %d %d %d\n", global_uid, token[0], token[1], token[2]);
+
+            token2 = strtok_r(token, " ", &token2_end);
+
+            // "<int type> <parameter 1> <parameter 2> ... <content>"
+            if (!token2) {
+                free(buf);
+                return;
+            }
+
+            if ((unsigned char)token2[0] == MSG_STR_TAG) {
+                token2 += 1;
+            }
+
+            msg_type = atoi(token2);
+            printf("%d|\t+ %d %d %d\n", global_uid, token2[0], token2[1], token2[2]);
+            printf("%d|\tmsg_type: %d\n", global_uid, msg_type);
+
+            switch (msg_type)
+            {
+            case MSG_LOGOUT:
+                // "MSG_LOGOUT <logout_uid> <content>"
+                token2 = strtok_r(NULL, " ", &token2_end);
+                parameter = atoi(token2); // logout_uid
+                user_pipe_release(parameter);
+
+                token2 = token2 + strlen(token2) + 1;
+                msg_tell(global_sock, token2);
+                break;
+
+            case MSG_TELL:
+                // "MSG_TELL <to_uid> <content>"
+                token2 = strtok_r(NULL, " ", &token2_end);
+                parameter = atoi(token2); // to_uid
+
+                if (parameter == global_uid) {
+                    token2 = token2 + strlen(token2) + 1;
+                    msg_tell(global_sock, token2);
+                }
+                break;
+
+            default:
+                // "MSG_NONE <content>"
+                token2 = token2 + strlen(token2) + 1;
+                msg_tell(global_sock, token2);
+                break;
+            }
+
+            token = strtok_r(NULL, delims, &token_end);
+        }
+
+        free(buf);
+
+        return;
+    }
+
     msg_read_signal();
+
+    return;
 }
 
 void msg_reset_read_offset(void)

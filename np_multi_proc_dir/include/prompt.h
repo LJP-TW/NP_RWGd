@@ -6,8 +6,10 @@
 // Message type
 #define MSG_NONE   0
 #define MSG_LOGOUT 1
+#define MSG_TELL   2
 
 #define MSG_STR_TAG 0xcc
+#define MSG_STR_DELIM 0xcd
 
 typedef struct msg_str_tag msg_str;
 struct msg_str_tag {
@@ -17,8 +19,8 @@ struct msg_str_tag {
 
 typedef struct message_tag message;
 struct message_tag {
-    int type;
-    int uid;
+    // int type;
+    // int uid;
     int write_offset;
     char mem[MAX_MSG_LEN]; // Ring Buffer
 };
@@ -44,7 +46,7 @@ extern void global_msg_init(void);
 
 extern void global_msg_release(void);
 
-extern void msg_set_msg(char *msg, int msg_type);
+extern void msg_set_msg(char *msg, int msg_type, int parameter);
 
 extern void msg_read_msg(void);
 

@@ -42,8 +42,6 @@ struct user_manager_tag {
     // this user array resides in shared memory
     // the uid is array index
     user *all_users;
-
-    uint32_t cnt; // how many users
 };
 
 extern user_manager_struct user_manager;

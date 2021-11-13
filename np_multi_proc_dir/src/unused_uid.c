@@ -44,6 +44,8 @@ uint32_t uid_alloc(unused_uid *uu)
     uint32_t bitmap = *(uu->uidmap);
     uint32_t rmsb = bitmap ^ (bitmap & (bitmap - 1));
 
+    // printf("[>] uid_alloc: %x\n", bitmap);
+
     *(uu->uidmap) ^= rmsb;
 
     return rmsb_to_uid(rmsb) + 1;

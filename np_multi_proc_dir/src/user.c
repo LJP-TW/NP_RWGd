@@ -28,14 +28,18 @@ static void sem_wait(void)
         {0, 1, SEM_UNDO}, // sem[0] += 1
     };
 
+    // printf("%d| sem_wait\n", global_uid);
+
     semop(user_manager.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
 static void sem_signal(void)
 {
     struct sembuf ops[] = {
-        {0, -1, 0}, // sem[0] -= 1
+        {0, -1, SEM_UNDO}, // sem[0] -= 1
     };
+
+    // printf("%d| sem_signal\n", global_uid);
 
     semop(user_manager.semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
@@ -60,8 +64,6 @@ void user_manager_init(void)
     for (int i = 1; i <= MAX_USER_ID; ++i) {
         user_manager.all_users[i].inused = 0;
     }
-
-    user_manager.cnt = 0;
 
     // Create directory for user fifo pipe
     // user_pipe/<to_uid>/<from_uid>
@@ -95,6 +97,8 @@ void user_sem_read_wait(int semid)
         {3, 0, 0},        // wait until c2_sem == 0
     };
 
+    // printf("%d| user_sem_read_wait\n", global_uid);
+
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
@@ -106,6 +110,8 @@ void user_sem_read_signal(int semid)
         {3,  1, 0}, // c2_sem += 1
     };
 
+    // printf("%d| user_sem_read_signal\n", global_uid);
+
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
 
@@ -116,6 +122,8 @@ void user_sem_write_wait(int semid)
         {0, 1, SEM_UNDO}, // write_sem += 1
         {2, 0, 0},        // wait until c1_sem == 0
     };
+    
+    // printf("%d| user_sem_write_wait\n", global_uid);
 
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
@@ -127,6 +135,8 @@ void user_sem_write_signal(int semid)
         {2,  1, 0}, // c1_sem += 1
         {3, -1, 0}, // c2_sem -= 1
     };
+    
+    // printf("%d| user_sem_write_signal\n", global_uid);
 
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
@@ -136,6 +146,8 @@ static void user_sem_init(int semid)
     struct sembuf ops[] = {
         {3, 1, 0}, // c2_sem += 1
     };
+
+    // printf("%d| user_sem_init\n", global_uid);
 
     semop(semid, ops, sizeof(ops) / sizeof(ops[0]));
 }
@@ -156,8 +168,6 @@ uint32_t user_new(struct sockaddr_in caddr)
     user_manager.all_users[uid].ruid = 0;
     strcpy(user_manager.all_users[uid].ip, inet_ntoa(caddr.sin_addr));
     strcpy(user_manager.all_users[uid].name, "(no name)");
-
-    user_manager.cnt += 1;
 
     sem_signal();
 
@@ -182,8 +192,6 @@ void user_release(uint32_t uid)
 
     uid_release(&(user_manager.unused_uid), uid);
     semctl(user_manager.all_users[uid].semid, 0, IPC_RMID);
-
-    user_manager.cnt -= 1;
 
     // Remove fifo pipe
     if (d) {
@@ -416,7 +424,7 @@ void user_broadcast(char *msg, int msg_type)
     // Must release user_manager semaphore before call this function
 
     // Write message
-    msg_set_msg(msg, msg_type);
+    msg_set_msg(msg, msg_type, 0);
 
     // Send signal to notify client to read message
     for (int i = 1; i < MAX_USER_ID; ++i) {
@@ -435,7 +443,7 @@ static void user_tell(uint32_t uid, char *msg)
     // Must release user_manager semaphore before call this function
 
     // Write message
-    msg_set_msg(msg, MSG_NONE);
+    msg_set_msg(msg, MSG_TELL, uid);
 
     // Send signal to notify client to read message
     sem_wait();
