@@ -560,6 +560,7 @@ int cmd_run(int sock, cmd_node *cmd)
 
         // Free plist
         plist_release(plist);
+        plist = NULL;
     } else {
         // If there is origin_np_in, merge origin_np_in to plist
         if (origin_np_in) {
@@ -572,6 +573,7 @@ int cmd_run(int sock, cmd_node *cmd)
         } else {
             plist_merge(np_out->plist, plist);
             plist_release(plist);
+            plist = NULL;
         }
     }
 

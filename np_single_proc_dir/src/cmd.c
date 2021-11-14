@@ -716,6 +716,7 @@ int cmd_run(user *user, cmd_node *cmd)
         } else {
             plist_merge(np_out->plist, plist);
             plist_release(plist);
+            plist = NULL;
         }
     } else if (up_out && up_out != (up_node *)-1) {
         if (origin_np_in) {
@@ -730,6 +731,7 @@ int cmd_run(user *user, cmd_node *cmd)
         } else {
             plist_merge(up_out->plist, plist);
             plist_release(plist);
+            plist = NULL;
         }
     } else {
         int status;
@@ -754,6 +756,7 @@ int cmd_run(user *user, cmd_node *cmd)
 
         // Free plist
         plist_release(plist);
+        plist = NULL;
     }
 
     // Close user pipe
